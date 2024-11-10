@@ -2,7 +2,9 @@
 name = "wodgen"
 version = "0.1.0"
 edition = "2021"
+authors = ["Taha Hachana <tahahachana@gmail.com>"]
 
 [dependencies]
-clap = "4.5.20"
+clap = { version = "4.5.20", features = ["derive"] }
 csv = "1.3.1"
+rand = "0.8.5"

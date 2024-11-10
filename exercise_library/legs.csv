@@ -1,4 +1,4 @@
-name,exercise_type,exercise_level,exercise_programming,goal,video
-squat,legs,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/squat.mp4
-squat_cossack,legs,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/squat_cossack.mp4
-lunge_reverse,legs,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/lunge_reverse.mp4
+name,exercise_type,exercise_category,exercise_level,exercise_programming,bodyweight,goal,video
+squat,legs,primary,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/squat.mp4
+squat_cossack,legs,secondary,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/squat_cossack.mp4
+lunge_reverse,legs,accessory,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/legs/lunge_reverse.mp4

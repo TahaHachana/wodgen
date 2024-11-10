@@ -1,4 +1,4 @@
-name,exercise_type,exercise_level,exercise_programming,goal,video
-row_regular_bar,pull,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_regular_bar.mp4
-row_wide_bar,pull,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_wide_bar.mp4
-row_supinated_bar,pull,beginner,reps,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_supinated_bar.mp4
+name,exercise_type,exercise_category,exercise_level,exercise_programming,bodyweight,goal,video
+row_regular_bar,pull,primary,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_regular_bar.mp4
+row_wide_bar,pull,secondary,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_wide_bar.mp4
+row_supinated_bar,pull,accessory,beginner,reps,true,,/home/taha/Documents/github/self/priv/wodgen/exercise_library/video/pull/row_supinated_bar.mp4
