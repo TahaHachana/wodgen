@@ -3,7 +3,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 
 // --------------------------------------------------
-const EXERCISE_LIBRARY_DIR: &str = "exercise_library";
+const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
 const LEGS_FILE: &str = "legs.csv";
@@ -74,6 +74,7 @@ impl WorkoutExercise {
             ExerciseProgramming::Reps => (String::new(), String::new(), String::from("X")),
             ExerciseProgramming::Time => (String::new(), String::from("X"), String::new()),
         };
+
         WorkoutExercise {
             group,
             name: exercise.name.clone(),
@@ -185,7 +186,8 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 
 // --------------------------------------------------
 fn to_title_case(input: String) -> String {
-    input.replace('_', " ")
+    input
+        .replace('_', " ")
         .split_whitespace()
         .map(|word| {
             let mut c = word.chars();
@@ -243,7 +245,7 @@ fn main() {
     shuffle_vector(&mut relevant_exercises);
 
     let mut workout = Vec::<WorkoutExercise>::new();
-    
+
     // Push a skill exercise placeholder to the workout
     workout.push(WorkoutExercise {
         group: 1,
@@ -255,7 +257,7 @@ fn main() {
         goal: String::new(),
         video: String::new(),
     });
-    
+
     // Strength training
     for group in 1..(args.groups + 1) {
         exercise_types.iter().for_each(|t| {
