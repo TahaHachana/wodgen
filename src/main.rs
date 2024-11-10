@@ -1,9 +1,14 @@
 use clap::Parser;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
+use csv::{Reader, Writer};
+use serde::Serialize;
+use std::error::Error;
+use chrono::Local;
 
 // --------------------------------------------------
 const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
+const WORKOUTS_DIR: &str = "/home/taha/Documents/training/workouts";
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
 const LEGS_FILE: &str = "legs.csv";
@@ -54,7 +59,7 @@ struct Exercise {
     video: String,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Serialize)]
 #[allow(dead_code)]
 struct WorkoutExercise {
     group: u32,
@@ -114,7 +119,7 @@ fn shuffle_vector<T>(vec: &mut Vec<T>) {
 // Read a CSV file and return a vector of Exercise structs
 fn read_exercise_csv(file_path: &str) -> Vec<Exercise> {
     let mut exercises: Vec<Exercise> = Vec::new();
-    let mut rdr = csv::Reader::from_path(file_path).unwrap();
+    let mut rdr = Reader::from_path(file_path).unwrap();
     for result in rdr.records() {
         let record = result.unwrap();
         let name = to_title_case(record.get(0).unwrap().to_string());
@@ -172,6 +177,19 @@ fn read_exercise_csv(file_path: &str) -> Vec<Exercise> {
         });
     }
     exercises
+}
+
+// --------------------------------------------------
+pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<(), Box<dyn Error>> {
+    // Create a CSV writer
+    let mut wtr = Writer::from_path(file)?;
+
+    // Serialize each record into CSV and write it to the file
+    for record in data {
+        wtr.serialize(record)?;
+    }
+    wtr.flush()?;
+    Ok(())
 }
 
 // --------------------------------------------------
@@ -318,5 +336,7 @@ fn main() {
     let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
 
-    println!("{:?}", workout)
+    let date = Local::now().format("%Y_%m_%d").to_string();
+    let file_name = format!("{}/{}.csv", WORKOUTS_DIR, date);
+    write_csv(&file_name, workout).unwrap();
 }
