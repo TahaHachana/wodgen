@@ -187,7 +187,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 // --------------------------------------------------
 fn to_title_case(input: String) -> String {
     input
-        .replace("__", " - ")        
+        .replace("__", " - ")
         .replace('_', " ")
         .split_whitespace()
         .map(|word| {
@@ -268,7 +268,16 @@ fn main() {
                 .filter(|&e| e.exercise_type == *t)
                 // Filter further if exercise_level is some
                 .filter(|&e| match &exercise_level {
-                    Some(level) => e.exercise_level == *level,
+                    Some(level) => match e.exercise_level {
+                        ExerciseLevel::Beginner => *level == ExerciseLevel::Beginner,
+                        // Intermediate includes beginner
+                        ExerciseLevel::Intermediate => {
+                            *level == ExerciseLevel::Beginner
+                                || *level == ExerciseLevel::Intermediate
+                        }
+                        // Advanced includes intermediate and beginner
+                        ExerciseLevel::Advanced => true,
+                    },
                     None => true,
                 })
                 // Start with primary exercises then secondary and finally accessory
