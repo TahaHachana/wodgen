@@ -187,6 +187,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 // --------------------------------------------------
 fn to_title_case(input: String) -> String {
     input
+        .replace("__", " - ")        
         .replace('_', " ")
         .split_whitespace()
         .map(|word| {
@@ -259,7 +260,8 @@ fn main() {
     });
 
     // Strength training
-    for group in 1..(args.groups + 1) {
+    for group in 0..args.groups {
+        let mut exercises_to_remove = Vec::new();
         exercise_types.iter().for_each(|t| {
             let mut exercises_subset: Vec<&Exercise> = relevant_exercises
                 .iter()
@@ -292,10 +294,14 @@ fn main() {
                 })
                 .collect();
             if let Some(exercise) = remove_random(&mut exercises_subset) {
-                let workout_exercise = WorkoutExercise::from_exercise(group + 1, exercise);
+                // Mark the exercise for removal from the relevant_exercises vector
+                exercises_to_remove.push(exercise.name.clone());
+                let workout_exercise = WorkoutExercise::from_exercise(group + 2, exercise);
                 workout.push(workout_exercise);
             }
         });
+        // Remove the selected exercises from the relevant_exercises vector
+        relevant_exercises.retain(|e| !exercises_to_remove.contains(&e.name));
     }
 
     // Add cooldown exercise
