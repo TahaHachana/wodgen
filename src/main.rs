@@ -1,7 +1,6 @@
 use clap::Parser;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
-// use std::collections::HashMap;
 
 // --------------------------------------------------
 const EXERCISE_LIBRARY_DIR: &str = "exercise_library";
@@ -43,6 +42,7 @@ enum ExerciseProgramming {
 }
 
 #[derive(Debug, Clone)]
+#[allow(dead_code)]
 struct Exercise {
     name: String,
     exercise_type: ExerciseType,
@@ -55,9 +55,36 @@ struct Exercise {
 }
 
 #[derive(Debug)]
+#[allow(dead_code)]
 struct WorkoutExercise {
     group: u32,
-    exercise: Exercise,
+    name: String,
+    sets: String,
+    distance: String,
+    time: String,
+    reps: String,
+    goal: String,
+    video: String,
+}
+
+impl WorkoutExercise {
+    fn from_exercise(group: u32, exercise: &Exercise) -> WorkoutExercise {
+        let (distance, time, reps) = match exercise.exercise_programming {
+            ExerciseProgramming::Distance => (String::from("X"), String::new(), String::new()),
+            ExerciseProgramming::Reps => (String::new(), String::new(), String::from("X")),
+            ExerciseProgramming::Time => (String::new(), String::from("X"), String::new()),
+        };
+        WorkoutExercise {
+            group,
+            name: exercise.name.clone(),
+            sets: String::new(),
+            distance,
+            time,
+            reps,
+            goal: exercise.goal.clone().unwrap_or_default(),
+            video: exercise.video.clone(),
+        }
+    }
 }
 
 // --------------------------------------------------
@@ -83,13 +110,13 @@ fn shuffle_vector<T>(vec: &mut Vec<T>) {
 }
 
 // --------------------------------------------------
-// Parse a CSV file and return a vector of Exercise structs
-fn parse_csv(file_path: &str) -> Vec<Exercise> {
+// Read a CSV file and return a vector of Exercise structs
+fn read_exercise_csv(file_path: &str) -> Vec<Exercise> {
     let mut exercises: Vec<Exercise> = Vec::new();
     let mut rdr = csv::Reader::from_path(file_path).unwrap();
     for result in rdr.records() {
         let record = result.unwrap();
-        let name = record.get(0).unwrap().to_string();
+        let name = to_title_case(record.get(0).unwrap().to_string());
         let exercise_type = match record.get(1).unwrap() {
             "cooldown" => ExerciseType::Cooldown,
             "core" => ExerciseType::Core,
@@ -157,21 +184,19 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 }
 
 // --------------------------------------------------
-// fn select_random_exercise(
-//     exercises: &mut Vec<Exercise>,
-//     exercise_level: Option<ExerciseLevel>,
-// ) -> &Exercise {
-//     let mut rng = thread_rng();
-//     exercises.shuffle(&mut rng);
-
-//     match exercise_level {
-//         Some(level) => {
-//             let test: Vec<&Exercise> = exercises.iter().filter(|&e| e.exercise_level == ExerciseLevel::Advanced).collect();
-//             random_exercise(&test)
-//         }
-//         None => random_exercise(exercises),
-//     }
-// }
+fn to_title_case(input: String) -> String {
+    input.replace('_', " ")
+        .split_whitespace()
+        .map(|word| {
+            let mut c = word.chars();
+            match c.next() {
+                None => String::new(),
+                Some(first) => first.to_uppercase().collect::<String>() + c.as_str(),
+            }
+        })
+        .collect::<Vec<String>>()
+        .join(" ")
+}
 
 // --------------------------------------------------
 fn main() {
@@ -203,14 +228,14 @@ fn main() {
     let push_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, PUSH_FILE);
 
     // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = parse_csv(&cooldown_file_path);
+    let mut cooldown_exercises = read_exercise_csv(&cooldown_file_path);
 
     let mut relevant_exercises = Vec::new();
     exercise_types.iter().for_each(|t| match t {
-        ExerciseType::Core => relevant_exercises.extend(parse_csv(&core_file_path)),
-        ExerciseType::Legs => relevant_exercises.extend(parse_csv(&legs_file_path)),
-        ExerciseType::Pull => relevant_exercises.extend(parse_csv(&pull_file_path)),
-        ExerciseType::Push => relevant_exercises.extend(parse_csv(&push_file_path)),
+        ExerciseType::Core => relevant_exercises.extend(read_exercise_csv(&core_file_path)),
+        ExerciseType::Legs => relevant_exercises.extend(read_exercise_csv(&legs_file_path)),
+        ExerciseType::Pull => relevant_exercises.extend(read_exercise_csv(&pull_file_path)),
+        ExerciseType::Push => relevant_exercises.extend(read_exercise_csv(&push_file_path)),
         // A cooldown exercise is always included at the end
         _ => (),
     });
@@ -219,8 +244,20 @@ fn main() {
 
     let mut workout = Vec::<WorkoutExercise>::new();
     
+    // Push a skill exercise placeholder to the workout
+    workout.push(WorkoutExercise {
+        group: 1,
+        name: "Skill Block".to_string(),
+        sets: String::new(),
+        distance: String::new(),
+        time: String::new(),
+        reps: String::new(),
+        goal: String::new(),
+        video: String::new(),
+    });
+    
     // Strength training
-    for group in 0..args.groups {
+    for group in 1..(args.groups + 1) {
         exercise_types.iter().for_each(|t| {
             let mut exercises_subset: Vec<&Exercise> = relevant_exercises
                 .iter()
@@ -253,22 +290,16 @@ fn main() {
                 })
                 .collect();
             if let Some(exercise) = remove_random(&mut exercises_subset) {
-                let workout_exercise = WorkoutExercise {
-                    group : group + 1,
-                    exercise: exercise.clone(),
-                };
+                let workout_exercise = WorkoutExercise::from_exercise(group + 1, exercise);
                 workout.push(workout_exercise);
             }
         });
     }
-    
+
     // Add cooldown exercise
     let cooldown_exercise = remove_random(&mut cooldown_exercises).unwrap();
-    let workout_exercise = WorkoutExercise {
-        group: args.groups + 1,
-        exercise: cooldown_exercise.clone(),
-    };
+    let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
-    
+
     println!("{:?}", workout)
 }
