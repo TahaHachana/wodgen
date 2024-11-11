@@ -1,10 +1,13 @@
+use chrono::Local;
+use chrono::{DateTime, Utc};
 use clap::Parser;
+use csv::{Reader, Writer};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
-use csv::{Reader, Writer};
-use serde::Serialize;
+use serde::de::DeserializeOwned;
+use serde::{Deserialize, Serialize};
 use std::error::Error;
-use chrono::Local;
+use std::fs::File;
 
 // --------------------------------------------------
 const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
@@ -14,9 +17,11 @@ const CORE_FILE: &str = "core.csv";
 const LEGS_FILE: &str = "legs.csv";
 const PULL_FILE: &str = "pull.csv";
 const PUSH_FILE: &str = "push.csv";
+const SNOOZED_FILE: &str = "snoozed.csv";
+const SNOOZE_PERIOD: i64 = 7;
 
 // --------------------------------------------------
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 enum ExerciseType {
     Cooldown,
     Core,
@@ -25,28 +30,28 @@ enum ExerciseType {
     Push,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 enum ExerciseCategory {
     Primary,
     Secondary,
     Accessory,
 }
 
-#[derive(Debug, PartialEq, Clone)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 enum ExerciseLevel {
     Beginner,
     Intermediate,
     Advanced,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 enum ExerciseProgramming {
     Distance,
     Reps,
     Time,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 struct Exercise {
     name: String,
@@ -82,7 +87,7 @@ impl WorkoutExercise {
 
         WorkoutExercise {
             group,
-            name: exercise.name.clone(),
+            name: to_title_case(exercise.name.clone()),
             sets: String::new(),
             distance,
             time,
@@ -91,6 +96,43 @@ impl WorkoutExercise {
             video: exercise.video.clone(),
         }
     }
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct SnoozedExercise {
+    name: String,
+    #[serde(with = "chrono::serde::ts_seconds")]
+    timestamp: DateTime<Utc>,
+}
+
+// --------------------------------------------------
+pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>, Box<dyn Error>> {
+    // Open the CSV file
+    let file = File::open(file)?;
+
+    // Create a CSV reader from the file
+    let mut rdr = Reader::from_reader(file);
+
+    // Deserialize each record into a T struct and collect them into a vector
+    let mut records = Vec::new();
+    for result in rdr.deserialize() {
+        let record: T = result?;
+        records.push(record);
+    }
+    Ok(records)
+}
+
+// --------------------------------------------------
+pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<(), Box<dyn Error>> {
+    // Create a CSV writer
+    let mut wtr = Writer::from_path(file)?;
+
+    // Serialize each record into CSV and write it to the file
+    for record in data {
+        wtr.serialize(record)?;
+    }
+    wtr.flush()?;
+    Ok(())
 }
 
 // --------------------------------------------------
@@ -116,83 +158,7 @@ fn shuffle_vector<T>(vec: &mut Vec<T>) {
 }
 
 // --------------------------------------------------
-// Read a CSV file and return a vector of Exercise structs
-fn read_exercise_csv(file_path: &str) -> Vec<Exercise> {
-    let mut exercises: Vec<Exercise> = Vec::new();
-    let mut rdr = Reader::from_path(file_path).unwrap();
-    for result in rdr.records() {
-        let record = result.unwrap();
-        let name = to_title_case(record.get(0).unwrap().to_string());
-        let exercise_type = match record.get(1).unwrap() {
-            "cooldown" => ExerciseType::Cooldown,
-            "core" => ExerciseType::Core,
-            "legs" => ExerciseType::Legs,
-            "pull" => ExerciseType::Pull,
-            "push" => ExerciseType::Push,
-            _ => panic!("Invalid exercise type"),
-        };
-        let exercise_category = match record.get(2).unwrap() {
-            "primary" => ExerciseCategory::Primary,
-            "secondary" => ExerciseCategory::Secondary,
-            "accessory" => ExerciseCategory::Accessory,
-            _ => panic!("Invalid exercise category"),
-        };
-        let exercise_level = match record.get(3).unwrap() {
-            "beginner" => ExerciseLevel::Beginner,
-            "intermediate" => ExerciseLevel::Intermediate,
-            "advanced" => ExerciseLevel::Advanced,
-            _ => panic!("Invalid exercise level"),
-        };
-        let exercise_programming = match record.get(4).unwrap() {
-            "distance" => ExerciseProgramming::Distance,
-            "reps" => ExerciseProgramming::Reps,
-            "time" => ExerciseProgramming::Time,
-            _ => panic!("Invalid exercise programming"),
-        };
-        let is_bodyweight = match record.get(5).unwrap() {
-            "true" => true,
-            "false" => false,
-            _ => panic!("Invalid bodyweight value"),
-        };
-        let goal = match record.get(6) {
-            None => None,
-            Some(goal) => {
-                if goal.is_empty() {
-                    None
-                } else {
-                    Some(goal.to_string())
-                }
-            }
-        };
-        let video = record.get(7).unwrap().to_string();
-        exercises.push(Exercise {
-            name,
-            exercise_type,
-            exercise_category,
-            exercise_level,
-            exercise_programming,
-            bodyweight: is_bodyweight,
-            goal,
-            video,
-        });
-    }
-    exercises
-}
-
-// --------------------------------------------------
-pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<(), Box<dyn Error>> {
-    // Create a CSV writer
-    let mut wtr = Writer::from_path(file)?;
-
-    // Serialize each record into CSV and write it to the file
-    for record in data {
-        wtr.serialize(record)?;
-    }
-    wtr.flush()?;
-    Ok(())
-}
-
-// --------------------------------------------------
+// Remove a random element from a vector
 fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
     if vec.is_empty() {
         None
@@ -203,6 +169,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 }
 
 // --------------------------------------------------
+// For pretty printing the exercise names
 fn to_title_case(input: String) -> String {
     input
         .replace("__", " - ")
@@ -247,25 +214,50 @@ fn main() {
     let legs_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, LEGS_FILE);
     let pull_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, PULL_FILE);
     let push_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, PUSH_FILE);
+    let snoozed_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, SNOOZED_FILE);
 
     // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = read_exercise_csv(&cooldown_file_path);
+    let mut cooldown_exercises = read_csv::<Exercise>(&cooldown_file_path).unwrap();
+
+    // Read snoozed exercises and filter out those that are still within the snooze period
+    let mut snoozed_exercises = read_csv::<SnoozedExercise>(&snoozed_file_path)
+        .unwrap()
+        .into_iter()
+        .filter(|e| {
+            let now = Utc::now();
+            now.signed_duration_since(e.timestamp).num_days() < SNOOZE_PERIOD
+        })
+        .collect::<Vec<_>>();
 
     let mut relevant_exercises = Vec::new();
+
     exercise_types.iter().for_each(|t| match t {
-        ExerciseType::Core => relevant_exercises.extend(read_exercise_csv(&core_file_path)),
-        ExerciseType::Legs => relevant_exercises.extend(read_exercise_csv(&legs_file_path)),
-        ExerciseType::Pull => relevant_exercises.extend(read_exercise_csv(&pull_file_path)),
-        ExerciseType::Push => relevant_exercises.extend(read_exercise_csv(&push_file_path)),
+        ExerciseType::Core => {
+            relevant_exercises.extend(read_csv::<Exercise>(&core_file_path).unwrap())
+        }
+        ExerciseType::Legs => {
+            relevant_exercises.extend(read_csv::<Exercise>(&legs_file_path).unwrap())
+        }
+        ExerciseType::Pull => {
+            relevant_exercises.extend(read_csv::<Exercise>(&pull_file_path).unwrap())
+        }
+        ExerciseType::Push => {
+            relevant_exercises.extend(read_csv::<Exercise>(&push_file_path).unwrap())
+        }
         // A cooldown exercise is always included at the end
         _ => (),
+    });
+
+    // Remove snoozed exercises from relevant_exercises
+    snoozed_exercises.iter().for_each(|snoozed| {
+        relevant_exercises.retain(|e| e.name != snoozed.name);
     });
 
     shuffle_vector(&mut relevant_exercises);
 
     let mut workout = Vec::<WorkoutExercise>::new();
 
-    // Push a skill exercise placeholder to the workout
+    // Skill block placeholder
     workout.push(WorkoutExercise {
         group: 1,
         name: "Skill Block".to_string(),
@@ -277,7 +269,7 @@ fn main() {
         video: String::new(),
     });
 
-    // Strength training
+    // Strength training block
     for group in 0..args.groups {
         let mut exercises_to_remove = Vec::new();
         exercise_types.iter().for_each(|t| {
@@ -286,12 +278,12 @@ fn main() {
                 .filter(|&e| e.exercise_type == *t)
                 // Filter further if exercise_level is some
                 .filter(|&e| match &exercise_level {
-                    Some(level) => match e.exercise_level {
-                        ExerciseLevel::Beginner => *level == ExerciseLevel::Beginner,
+                    Some(level) => match *level {
+                        ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
                         // Intermediate includes beginner
                         ExerciseLevel::Intermediate => {
-                            *level == ExerciseLevel::Beginner
-                                || *level == ExerciseLevel::Intermediate
+                            e.exercise_level == ExerciseLevel::Beginner
+                                || e.exercise_level == ExerciseLevel::Intermediate
                         }
                         // Advanced includes intermediate and beginner
                         ExerciseLevel::Advanced => true,
@@ -320,23 +312,38 @@ fn main() {
                     },
                 })
                 .collect();
+
             if let Some(exercise) = remove_random(&mut exercises_subset) {
                 // Mark the exercise for removal from the relevant_exercises vector
                 exercises_to_remove.push(exercise.name.clone());
+                // Add the exercise to the snoozed_exercises vector
+                snoozed_exercises.push(SnoozedExercise {
+                    name: exercise.name.clone(),
+                    timestamp: Utc::now(),
+                });
                 let workout_exercise = WorkoutExercise::from_exercise(group + 2, exercise);
                 workout.push(workout_exercise);
             }
         });
-        // Remove the selected exercises from the relevant_exercises vector
+        // To not select the same exercise twice
         relevant_exercises.retain(|e| !exercises_to_remove.contains(&e.name));
     }
 
-    // Add cooldown exercise
+    // Cooldown block
     let cooldown_exercise = remove_random(&mut cooldown_exercises).unwrap();
+    // Snooze the cooldown exercise
+    snoozed_exercises.push(SnoozedExercise {
+        name: cooldown_exercise.name.clone(),
+        timestamp: Utc::now(),
+    });
     let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
 
+    // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
     let file_name = format!("{}/{}.csv", WORKOUTS_DIR, date);
     write_csv(&file_name, workout).unwrap();
+
+    // Override the snoozed exercises CSV with the updated snoozed exercises
+    write_csv(&snoozed_file_path, snoozed_exercises).unwrap();
 }
