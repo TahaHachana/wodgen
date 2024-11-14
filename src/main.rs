@@ -1,3 +1,4 @@
+use anyhow::{Context, Result};
 use chrono::Local;
 use chrono::{DateTime, Utc};
 use clap::Parser;
@@ -6,7 +7,6 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
-use std::error::Error;
 use std::fs::File;
 
 // --------------------------------------------------
@@ -106,9 +106,9 @@ struct SnoozedExercise {
 }
 
 // --------------------------------------------------
-pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>, Box<dyn Error>> {
+pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>> {
     // Open the CSV file
-    let file = File::open(file)?;
+    let file = File::open(file).with_context(|| format!("Failed to open file: {}", file))?;
 
     // Create a CSV reader from the file
     let mut rdr = Reader::from_reader(file);
@@ -116,20 +116,21 @@ pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>, Box<dyn Error
     // Deserialize each record into a T struct and collect them into a vector
     let mut records = Vec::new();
     for result in rdr.deserialize() {
-        let record: T = result?;
+        let record: T = result.with_context(|| "Failed to deserialize record")?;
         records.push(record);
     }
     Ok(records)
 }
 
 // --------------------------------------------------
-pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<(), Box<dyn Error>> {
+pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<()> {
     // Create a CSV writer
     let mut wtr = Writer::from_path(file)?;
 
     // Serialize each record into CSV and write it to the file
     for record in data {
-        wtr.serialize(record)?;
+        wtr.serialize(record)
+            .with_context(|| "Failed to serialize record")?;
     }
     wtr.flush()?;
     Ok(())
@@ -187,7 +188,7 @@ fn to_title_case(input: String) -> String {
 }
 
 // --------------------------------------------------
-fn main() {
+fn main() -> Result<()> {
     let args = Args::parse();
 
     let exercise_types: Vec<ExerciseType> = args
@@ -217,11 +218,10 @@ fn main() {
     let snoozed_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, SNOOZED_FILE);
 
     // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = read_csv::<Exercise>(&cooldown_file_path).unwrap();
+    let mut cooldown_exercises = read_csv::<Exercise>(&cooldown_file_path)?;
 
     // Read snoozed exercises and filter out those that are still within the snooze period
-    let mut snoozed_exercises = read_csv::<SnoozedExercise>(&snoozed_file_path)
-        .unwrap()
+    let mut snoozed_exercises = read_csv::<SnoozedExercise>(&snoozed_file_path)?
         .into_iter()
         .filter(|e| {
             let now = Utc::now();
@@ -231,22 +231,16 @@ fn main() {
 
     let mut relevant_exercises = Vec::new();
 
-    exercise_types.iter().for_each(|t| match t {
-        ExerciseType::Core => {
-            relevant_exercises.extend(read_csv::<Exercise>(&core_file_path).unwrap())
+    for t in &exercise_types {
+        match t {
+            ExerciseType::Core => relevant_exercises.extend(read_csv::<Exercise>(&core_file_path)?),
+            ExerciseType::Legs => relevant_exercises.extend(read_csv::<Exercise>(&legs_file_path)?),
+            ExerciseType::Pull => relevant_exercises.extend(read_csv::<Exercise>(&pull_file_path)?),
+            ExerciseType::Push => relevant_exercises.extend(read_csv::<Exercise>(&push_file_path)?),
+            // A cooldown exercise is always included at the end
+            _ => (),
         }
-        ExerciseType::Legs => {
-            relevant_exercises.extend(read_csv::<Exercise>(&legs_file_path).unwrap())
-        }
-        ExerciseType::Pull => {
-            relevant_exercises.extend(read_csv::<Exercise>(&pull_file_path).unwrap())
-        }
-        ExerciseType::Push => {
-            relevant_exercises.extend(read_csv::<Exercise>(&push_file_path).unwrap())
-        }
-        // A cooldown exercise is always included at the end
-        _ => (),
-    });
+    }
 
     // Remove snoozed exercises from relevant_exercises
     snoozed_exercises.iter().for_each(|snoozed| {
@@ -272,7 +266,7 @@ fn main() {
     // Strength training block
     for group in 0..args.groups {
         let mut exercises_to_remove = Vec::new();
-        exercise_types.iter().for_each(|t| {
+        for t in &exercise_types {
             let mut exercises_subset: Vec<&Exercise> = relevant_exercises
                 .iter()
                 .filter(|&e| e.exercise_type == *t)
@@ -324,7 +318,7 @@ fn main() {
                 let workout_exercise = WorkoutExercise::from_exercise(group + 2, exercise);
                 workout.push(workout_exercise);
             }
-        });
+        }
         // To not select the same exercise twice
         relevant_exercises.retain(|e| !exercises_to_remove.contains(&e.name));
     }
@@ -342,8 +336,10 @@ fn main() {
     // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
     let file_name = format!("{}/{}.csv", WORKOUTS_DIR, date);
-    write_csv(&file_name, workout).unwrap();
+    write_csv(&file_name, workout)?;
 
     // Override the snoozed exercises CSV with the updated snoozed exercises
-    write_csv(&snoozed_file_path, snoozed_exercises).unwrap();
+    write_csv(&snoozed_file_path, snoozed_exercises)?;
+
+    Ok(())
 }
