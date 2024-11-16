@@ -302,7 +302,11 @@ fn main() -> Result<()> {
                 })
                 // Start with primary exercises then secondary and finally accessory
                 .filter(|&e| match group {
-                    0 => e.exercise_category == ExerciseCategory::Primary,
+                    0 => match exercise_level {
+                        // Primary exercises are too hard for beginners
+                        ExerciseLevel::Beginner => e.exercise_category == ExerciseCategory::Secondary,
+                        _ => e.exercise_category == ExerciseCategory::Primary,
+                    },
                     1 => {
                         e.exercise_category == ExerciseCategory::Primary
                             || e.exercise_category == ExerciseCategory::Secondary
