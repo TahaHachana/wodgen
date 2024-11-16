@@ -1,0 +1,14 @@
+name,exercise_type,exercise_category,exercise_level,exercise_programming,bodyweight,goal,video
+plank_front,Core,Primary,Beginner,Time,true,,/home/taha/Documents/training/exercise_library/video/core/plank_front.mp4
+arch-up,Core,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/arch-up.mp4
+tuck-up,Core,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/tuck-up.mp4
+legs_raise__hanging,Core,Primary,Intermediate,Reps,true,10,/home/taha/Documents/training/exercise_library/video/core/legs_raise_hanging.mp4
+legs_raise__hanging__tuck,Core,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/legs_raise_hanging_tuck.mp4
+legs_raise__around_the_world,Core,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/legs_raise_around_the_world.mp4
+arch-up__rock,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/arch-up_rock.mp4
+hips_rotation__bent_knees,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/hips_rotation_bent_knees.mp4
+plank__dynamic__knee_bend,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/plank_dynamic_knee_bend.mp4
+plank__dynamic__side__high,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/plank_dynamic_side_high.mp4
+plank__dynamic__side,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/plank_dynamic_side.mp4
+superman__dynamic,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/superman_dynamic.mp4
+support__front__shoulder_tap,Core,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/core/support_front_shoulder_tap.mp4

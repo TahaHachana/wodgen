@@ -7,6 +7,7 @@ use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs::File;
 
 // --------------------------------------------------
@@ -21,7 +22,7 @@ const SNOOZED_FILE: &str = "snoozed.csv";
 const SNOOZE_PERIOD: i64 = 7;
 
 // --------------------------------------------------
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 enum ExerciseType {
     Cooldown,
     Core,
@@ -87,7 +88,7 @@ impl WorkoutExercise {
 
         WorkoutExercise {
             group,
-            name: to_title_case(exercise.name.clone()),
+            name: to_title_case(&exercise.name),
             sets: String::new(),
             distance,
             time,
@@ -171,7 +172,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 
 // --------------------------------------------------
 // For pretty printing the exercise names
-fn to_title_case(input: String) -> String {
+fn to_title_case(input: &String) -> String {
     input
         .replace("__", " - ")
         .replace('_', " ")
@@ -210,15 +211,37 @@ fn main() -> Result<()> {
         _ => None,
     };
 
-    let cooldown_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, COOLDOWN_FILE);
-    let core_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, CORE_FILE);
-    let legs_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, LEGS_FILE);
-    let pull_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, PULL_FILE);
-    let push_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, PUSH_FILE);
+    let file_paths = [
+        (
+            ExerciseType::Cooldown,
+            format!("{}/{}", EXERCISE_LIBRARY_DIR, COOLDOWN_FILE),
+        ),
+        (
+            ExerciseType::Core,
+            format!("{}/{}", EXERCISE_LIBRARY_DIR, CORE_FILE),
+        ),
+        (
+            ExerciseType::Legs,
+            format!("{}/{}", EXERCISE_LIBRARY_DIR, LEGS_FILE),
+        ),
+        (
+            ExerciseType::Pull,
+            format!("{}/{}", EXERCISE_LIBRARY_DIR, PULL_FILE),
+        ),
+        (
+            ExerciseType::Push,
+            format!("{}/{}", EXERCISE_LIBRARY_DIR, PUSH_FILE),
+        ),
+    ]
+    .iter()
+    .cloned()
+    .collect::<HashMap<_, _>>();
+
+    let cooldown_file_path = file_paths.get(&ExerciseType::Cooldown).unwrap();
     let snoozed_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, SNOOZED_FILE);
 
     // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = read_csv::<Exercise>(&cooldown_file_path)?;
+    let mut cooldown_exercises = read_csv::<Exercise>(cooldown_file_path)?;
 
     // Read snoozed exercises and filter out those that are still within the snooze period
     let mut snoozed_exercises = read_csv::<SnoozedExercise>(&snoozed_file_path)?
@@ -232,13 +255,8 @@ fn main() -> Result<()> {
     let mut relevant_exercises = Vec::new();
 
     for t in &exercise_types {
-        match t {
-            ExerciseType::Core => relevant_exercises.extend(read_csv::<Exercise>(&core_file_path)?),
-            ExerciseType::Legs => relevant_exercises.extend(read_csv::<Exercise>(&legs_file_path)?),
-            ExerciseType::Pull => relevant_exercises.extend(read_csv::<Exercise>(&pull_file_path)?),
-            ExerciseType::Push => relevant_exercises.extend(read_csv::<Exercise>(&push_file_path)?),
-            // A cooldown exercise is always included at the end
-            _ => (),
+        if let Some(file_path) = file_paths.get(t) {
+            relevant_exercises.extend(read_csv::<Exercise>(file_path)?);
         }
     }
 

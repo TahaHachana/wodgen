@@ -1,0 +1,17 @@
+name,exercise_type,exercise_category,exercise_level,exercise_programming,bodyweight,goal,video
+pull-up__regular,Pull,Primary,Intermediate,Reps,true,10,/home/taha/Documents/training/exercise_library/video/pull/pull-up_regular.mp4
+chin_up__regular,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/chin-up_regular.mp4
+pull-up__pull_to_head,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_pull_to_head.mp4
+pull-up__narrow,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_narrow.mp4
+pull-up__mixed_grip,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_mixed_grip.mp4
+pull-up__slow_negative,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_slow_negative.mp4
+row__regular__bar,Pull,Secondary,Beginner,Reps,true,15,/home/taha/Documents/training/exercise_library/video/pull/row_regular_bar.mp4
+row__wide__bar,Pull,Secondary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/row_wide_bar.mp4
+row__supinated__bar,Pull,Secondary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/row_supinated_bar.mp4
+pull-up__rings__wide,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_rings_wide.mp4
+pull-up__rings__l-sit,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_rings_l-sit.mp4
+pull-up__l-sit,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/pull-up_l-sit.mp4
+chin-up__l-sit,Pull,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/chin-up_l-sit.mp4
+face_pull__rings,Pull,Accessory,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/face_pull_rings.mp4
+biceps_curl__rings,Pull,Accessory,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/biceps_curl_rings.mp4
+biceps_curl__rings__behind_back,Pull,Accessory,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/pull/biceps_curl_rings_behind_back.mp4

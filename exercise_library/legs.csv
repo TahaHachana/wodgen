@@ -1,0 +1,13 @@
+name,exercise_type,exercise_category,exercise_level,exercise_programming,bodyweight,goal,video
+squat,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat.mp4
+squat_cossack,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_cossack.mp4
+lunge_reverse,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/lunge_reverse.mp4
+bridge_dynamic,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/bridge_dynamic.mp4
+squat__goblet,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_goblet.mp4
+lunge_jumping,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/lunge_jumping.mp4
+squat__jump__side,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_side_jump.mp4
+squat_step-up,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_step_up.mp4
+squat__cossack__weighted,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_cossack_weighted.mp4
+lunge__reverse__weighted,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/lunge_reverse_weighted.mp4
+squat__wide,Legs,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_wide.mp4
+squat__narrow_stance,Legs,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_narrow_stance.mp4
