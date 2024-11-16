@@ -13,16 +13,18 @@ use std::fs::File;
 // --------------------------------------------------
 const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
 const WORKOUTS_DIR: &str = "/home/taha/Documents/training/workouts";
+
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
 const LEGS_FILE: &str = "legs.csv";
 const PULL_FILE: &str = "pull.csv";
 const PUSH_FILE: &str = "push.csv";
 const SNOOZED_FILE: &str = "snoozed.csv";
+
 const SNOOZE_PERIOD: i64 = 7;
 
 // --------------------------------------------------
-#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize, clap::ValueEnum)]
 enum ExerciseType {
     Cooldown,
     Core,
@@ -38,7 +40,7 @@ enum ExerciseCategory {
     Accessory,
 }
 
-#[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Debug, PartialEq, Clone, Serialize, Deserialize, clap::ValueEnum)]
 enum ExerciseLevel {
     Beginner,
     Intermediate,
@@ -142,14 +144,27 @@ pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<()> {
 #[command(author, version, about)]
 /// Workout generator based on specified types and level
 struct Args {
-    #[arg(short, long, value_name = "TYPES", required = true, num_args = 1..)]
-    types: Vec<String>,
+    #[arg(
+        short,
+        long,
+        value_name = "TYPES",
+        required = true,
+        num_args = 1..,
+        value_parser = clap::builder::EnumValueParser::<ExerciseType>::new(),
+    )]
+    types: Vec<ExerciseType>,
 
     #[arg(short, long, value_name = "GROUPS", default_value = "2")]
     groups: u32,
 
-    #[arg(short, long, value_name = "LEVEL")]
-    level: Option<String>,
+    #[arg(
+        short,
+        long,
+        value_name = "LEVEL",
+        default_value = "intermediate",
+        value_parser = clap::builder::EnumValueParser::<ExerciseLevel>::new(),
+    )]
+    level: ExerciseLevel,
 }
 
 // --------------------------------------------------
@@ -192,24 +207,10 @@ fn to_title_case(input: &String) -> String {
 fn main() -> Result<()> {
     let args = Args::parse();
 
-    let exercise_types: Vec<ExerciseType> = args
-        .types
-        .iter()
-        .map(|t| match t.as_str() {
-            "core" => ExerciseType::Core,
-            "legs" => ExerciseType::Legs,
-            "pull" => ExerciseType::Pull,
-            "push" => ExerciseType::Push,
-            _ => panic!("Invalid exercise type"),
-        })
-        .collect();
-
-    let exercise_level = match args.level.as_deref() {
-        Some("beginner") => Some(ExerciseLevel::Beginner),
-        Some("intermediate") => Some(ExerciseLevel::Intermediate),
-        Some("advanced") => Some(ExerciseLevel::Advanced),
-        _ => None,
-    };
+    let exercise_types = args.types;
+    println!("Exercise types: {:?}", exercise_types);
+    let exercise_level = args.level;
+    println!("Exercise level: {:?}", exercise_level);
 
     let file_paths = [
         (
@@ -272,7 +273,7 @@ fn main() -> Result<()> {
     // Skill block placeholder
     workout.push(WorkoutExercise {
         group: 1,
-        name: "Skill Block".to_string(),
+        name: String::from("Skill Block"),
         sets: String::new(),
         distance: String::new(),
         time: String::new(),
@@ -289,18 +290,15 @@ fn main() -> Result<()> {
                 .iter()
                 .filter(|&e| e.exercise_type == *t)
                 // Filter further if exercise_level is some
-                .filter(|&e| match &exercise_level {
-                    Some(level) => match *level {
-                        ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
-                        // Intermediate includes beginner
-                        ExerciseLevel::Intermediate => {
-                            e.exercise_level == ExerciseLevel::Beginner
-                                || e.exercise_level == ExerciseLevel::Intermediate
-                        }
-                        // Advanced includes intermediate and beginner
-                        ExerciseLevel::Advanced => true,
-                    },
-                    None => true,
+                .filter(|&e| match exercise_level {
+                    ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
+                    // Intermediate includes beginner
+                    ExerciseLevel::Intermediate => {
+                        e.exercise_level == ExerciseLevel::Beginner
+                            || e.exercise_level == ExerciseLevel::Intermediate
+                    }
+                    // Advanced includes intermediate and beginner
+                    ExerciseLevel::Advanced => true,
                 })
                 // Start with primary exercises then secondary and finally accessory
                 .filter(|&e| match group {
@@ -354,10 +352,11 @@ fn main() -> Result<()> {
     // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
     let file_name = format!("{}/{}.csv", WORKOUTS_DIR, date);
-    write_csv(&file_name, workout)?;
+    // write_csv(&file_name, workout)?;
+    println!("{:?}", workout);
 
     // Override the snoozed exercises CSV with the updated snoozed exercises
-    write_csv(&snoozed_file_path, snoozed_exercises)?;
+    // write_csv(&snoozed_file_path, snoozed_exercises)?;
 
     Ok(())
 }
