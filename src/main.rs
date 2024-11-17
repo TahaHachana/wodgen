@@ -1,15 +1,13 @@
 mod csv_utils;
 
 use crate::csv_utils::{read_csv, write_csv};
-use anyhow::{Context, Result};
+use anyhow::Result;
 use chrono::Local;
 use chrono::{DateTime, Utc};
 use clap::Parser;
-use csv::{Reader, Writer};
 use log::info;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
-use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::collections::HashMap;
@@ -17,9 +15,7 @@ use std::fs::File;
 use std::path::PathBuf;
 
 // --------------------------------------------------
-// const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
-// const WORKOUTS_DIR: &str = "/home/taha/Documents/training/workouts";
-
+// Constants for file names and snooze period
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
 const LEGS_FILE: &str = "legs.csv";
@@ -27,9 +23,10 @@ const PULL_FILE: &str = "pull.csv";
 const PUSH_FILE: &str = "push.csv";
 const SNOOZED_FILE: &str = "snoozed.csv";
 
-const SNOOZE_PERIOD: i64 = 7;
+const SNOOZE_PERIOD: i64 = 7; // Snooze period in days
 
 // --------------------------------------------------
+// Enum for different exercise types
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize, clap::ValueEnum)]
 enum ExerciseType {
     Cooldown,
@@ -39,6 +36,7 @@ enum ExerciseType {
     Push,
 }
 
+// Enum for different exercise categories
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize)]
 enum ExerciseCategory {
     Primary,
@@ -46,6 +44,7 @@ enum ExerciseCategory {
     Accessory,
 }
 
+// Enum for different exercise levels
 #[derive(Debug, PartialEq, Clone, Serialize, Deserialize, clap::ValueEnum)]
 enum ExerciseLevel {
     Beginner,
@@ -53,6 +52,7 @@ enum ExerciseLevel {
     Advanced,
 }
 
+// Enum for different exercise programming types
 #[derive(Debug, Clone, Serialize, Deserialize)]
 enum ExerciseProgramming {
     Distance,
@@ -60,6 +60,7 @@ enum ExerciseProgramming {
     Time,
 }
 
+// Struct to represent an exercise
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
 struct Exercise {
@@ -73,6 +74,7 @@ struct Exercise {
     video: String,
 }
 
+// Struct to represent a workout exercise
 #[derive(Debug, Serialize)]
 #[allow(dead_code)]
 struct WorkoutExercise {
@@ -87,6 +89,7 @@ struct WorkoutExercise {
 }
 
 impl WorkoutExercise {
+    // Create a WorkoutExercise from an Exercise
     fn from_exercise(group: u32, exercise: &Exercise) -> WorkoutExercise {
         let (distance, time, reps) = match exercise.exercise_programming {
             ExerciseProgramming::Distance => (String::from("X"), String::new(), String::new()),
@@ -107,6 +110,7 @@ impl WorkoutExercise {
     }
 }
 
+// Struct to represent a snoozed exercise
 #[derive(Debug, Serialize, Deserialize)]
 struct SnoozedExercise {
     name: String,
@@ -115,6 +119,7 @@ struct SnoozedExercise {
 }
 
 // --------------------------------------------------
+// Command line arguments struct
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 /// Workout generator based on specified types and level
@@ -243,12 +248,23 @@ fn filter_by_category(e: &Exercise, g: u32, l: &ExerciseLevel, t: &ExerciseType)
 }
 
 // --------------------------------------------------
+// Main function
 fn main() -> Result<()> {
     // Initialize the logger
     CombinedLogger::init(vec![
-        TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
-        WriteLogger::new(LevelFilter::Info, Config::default(), File::create("app.log").unwrap()),
-    ]).unwrap();
+        TermLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            TerminalMode::Mixed,
+            ColorChoice::Auto,
+        ),
+        WriteLogger::new(
+            LevelFilter::Info,
+            Config::default(),
+            File::create("app.log").unwrap(),
+        ),
+    ])
+    .unwrap();
 
     let args = Args::parse();
 
@@ -257,6 +273,7 @@ fn main() -> Result<()> {
     let exercise_level = args.level;
     info!("Exercise level: {:?}", exercise_level);
 
+    // Map exercise types to their corresponding file paths
     let file_paths = [
         (
             ExerciseType::Cooldown,
@@ -301,6 +318,7 @@ fn main() -> Result<()> {
 
     let mut relevant_exercises = Vec::new();
 
+    // Load exercises for each specified type
     for t in &exercise_types {
         if let Some(file_path) = file_paths.get(t) {
             let exercises = read_csv::<Exercise>(file_path.to_str().unwrap())?;
@@ -313,8 +331,12 @@ fn main() -> Result<()> {
     snoozed_exercises.iter().for_each(|snoozed| {
         relevant_exercises.retain(|e| e.name != snoozed.name);
     });
-    info!("Filtered out snoozed exercises, {} exercises remaining", relevant_exercises.len());
+    info!(
+        "Filtered out snoozed exercises, {} exercises remaining",
+        relevant_exercises.len()
+    );
 
+    // Shuffle the relevant exercises
     shuffle_vector(&mut relevant_exercises);
     info!("Shuffled relevant exercises");
 
@@ -372,10 +394,13 @@ fn main() -> Result<()> {
     });
     let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
-    info!("Added cooldown exercise {} to workout", cooldown_exercise.name);
-    
+    info!(
+        "Added cooldown exercise {} to workout",
+        cooldown_exercise.name
+    );
+
     println!("{:?}", workout);
-    
+
     // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
     let file_name = args.workouts_dir.join(format!("{}.csv", date));
@@ -390,4 +415,3 @@ fn main() -> Result<()> {
 }
 
 // todo: add unit tests for exercise filtering logic
-// toco: document the code
