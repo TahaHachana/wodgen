@@ -1,9 +1,12 @@
+mod csv_utils;
+
+use crate::csv_utils::{read_csv, write_csv};
 use anyhow::{Context, Result};
 use chrono::Local;
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use csv::{Reader, Writer};
-use log::{info, warn, error};
+use log::info;
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use serde::de::DeserializeOwned;
@@ -112,34 +115,11 @@ struct SnoozedExercise {
 }
 
 // --------------------------------------------------
-fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>> {
-    let file = File::open(file).with_context(|| format!("Failed to open file: {}", file))?;
-    let mut rdr = Reader::from_reader(file);
-    rdr.deserialize()
-        .enumerate()
-        .map(|(i, result)| {
-            result.with_context(|| format!("Failed to deserialize record at line {}", i + 1))
-        })
-        .collect()
-}
-
-pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<()> {
-    let mut wtr = Writer::from_path(file)
-        .with_context(|| format!("Failed to create CSV writer for file: {}", file))?;
-    data.into_iter().enumerate().try_for_each(|(i, record)| {
-        wtr.serialize(record)
-            .with_context(|| format!("Failed to serialize record at index {}", i))
-    })?;
-    wtr.flush()
-        .with_context(|| format!("Failed to flush CSV writer for file: {}", file))?;
-    Ok(())
-}
-
-// --------------------------------------------------
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
 /// Workout generator based on specified types and level
 struct Args {
+    /// Exercise types to include in the workout, e.g., core, legs, pull, push
     #[arg(
         short,
         long,
@@ -150,9 +130,11 @@ struct Args {
     )]
     types: Vec<ExerciseType>,
 
+    /// Number of super-sets to include in the workout
     #[arg(short, long, value_name = "GROUPS", default_value = "2")]
     groups: u32,
 
+    /// Level of difficulty for the workout
     #[arg(
         short,
         long,
@@ -162,6 +144,7 @@ struct Args {
     )]
     level: ExerciseLevel,
 
+    /// Path to the exercise library directory
     #[arg(
         short,
         long,
@@ -170,6 +153,7 @@ struct Args {
     )]
     exercise_library_dir: PathBuf,
 
+    /// Path to the workouts directory
     #[arg(
         short,
         long,
@@ -405,7 +389,5 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-// todo: separate CSV module
 // todo: add unit tests for exercise filtering logic
 // toco: document the code
-// todo: CLI improvements

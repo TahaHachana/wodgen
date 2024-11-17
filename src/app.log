@@ -1,0 +1,15 @@
+17:02:57 [INFO] Exercise types: [Push, Core]
+17:02:57 [INFO] Exercise level: Intermediate
+17:02:57 [INFO] Loaded 6 cooldown exercises
+17:02:57 [INFO] Loaded 25 snoozed exercises
+17:02:57 [INFO] Loaded 9 exercises for type Push
+17:02:57 [INFO] Loaded 13 exercises for type Core
+17:02:57 [INFO] Filtered out snoozed exercises, 10 exercises remaining
+17:02:57 [INFO] Shuffled relevant exercises
+17:02:57 [INFO] Added exercise dip__straight_bar to workout
+17:02:57 [INFO] Added exercise tuck-up to workout
+17:02:57 [INFO] Added exercise push-up__diamond to workout
+17:02:57 [INFO] Added exercise legs_raise__hanging to workout
+17:02:57 [INFO] Added cooldown exercise diaphragm_stretch__90-90 to workout
+17:02:57 [INFO] Saved workout to /home/taha/Documents/training/workouts/2024_11_17.csv
+17:02:57 [INFO] Updated snoozed exercises
