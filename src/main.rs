@@ -166,6 +166,15 @@ struct Args {
         default_value = "/home/taha/Documents/training/workouts"
     )]
     workouts_dir: PathBuf,
+    
+    /// Whether to include only bodyweight exercises in the workout
+    #[arg(
+        short,
+        long,
+        value_name = "BODYWEIGHT",
+        default_value = "true",
+    )]
+    bodyweight: bool,
 }
 
 // --------------------------------------------------
@@ -258,11 +267,11 @@ fn main() -> Result<()> {
             TerminalMode::Mixed,
             ColorChoice::Auto,
         ),
-        WriteLogger::new(
-            LevelFilter::Info,
-            Config::default(),
-            File::create("app.log").unwrap(),
-        ),
+        // WriteLogger::new(
+        //     LevelFilter::Info,
+        //     Config::default(),
+        //     File::create("app.log").unwrap(),
+        // ),
     ])
     .unwrap();
 
@@ -272,6 +281,10 @@ fn main() -> Result<()> {
     info!("Exercise types: {:?}", exercise_types);
     let exercise_level = args.level;
     info!("Exercise level: {:?}", exercise_level);
+    let num_groups = args.groups;
+    info!("Number of groups: {:?}", num_groups);
+    let bodyweight = args.bodyweight;
+    info!("Bodyweight: {:?}", bodyweight);
 
     // Map exercise types to their corresponding file paths
     let file_paths = [
@@ -326,6 +339,12 @@ fn main() -> Result<()> {
             relevant_exercises.extend(exercises);
         }
     }
+    
+    // Keep only bodyweight exercises if the bodyweight flag is true
+    if bodyweight {
+        relevant_exercises.retain(|e| e.bodyweight);
+        info!("Filtered out non-bodyweight exercises");
+    }
 
     // Remove snoozed exercises from relevant_exercises
     snoozed_exercises.iter().for_each(|snoozed| {
@@ -355,7 +374,7 @@ fn main() -> Result<()> {
     });
 
     // Strength training block
-    for group in 0..args.groups {
+    for group in 0..num_groups {
         let mut exercises_to_remove = Vec::new();
         for t in &exercise_types {
             let exercise = relevant_exercises
@@ -396,16 +415,16 @@ fn main() -> Result<()> {
         cooldown_exercise.name
     );
 
-    println!("{:?}", workout);
+    // println!("{:?}", workout);
 
     // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
     let file_name = args.workouts_dir.join(format!("{}.csv", date));
-    // write_csv(file_name.to_str().unwrap(), workout)?;
+    write_csv(file_name.to_str().unwrap(), workout)?;
     info!("Saved workout to {}", file_name.to_str().unwrap());
 
     // Override the snoozed exercises CSV with the updated snoozed exercises
-    // write_csv(snoozed_file_path.to_str().unwrap(), snoozed_exercises)?;
+    write_csv(snoozed_file_path.to_str().unwrap(), snoozed_exercises)?;
     info!("Updated snoozed exercises");
 
     Ok(())
