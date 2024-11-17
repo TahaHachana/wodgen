@@ -3,16 +3,19 @@ use chrono::Local;
 use chrono::{DateTime, Utc};
 use clap::Parser;
 use csv::{Reader, Writer};
+use log::{info, warn, error};
 use rand::seq::SliceRandom;
 use rand::{thread_rng, Rng};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
+use simplelog::*;
 use std::collections::HashMap;
 use std::fs::File;
+use std::path::PathBuf;
 
 // --------------------------------------------------
-const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
-const WORKOUTS_DIR: &str = "/home/taha/Documents/training/workouts";
+// const EXERCISE_LIBRARY_DIR: &str = "/home/taha/Documents/training/exercise_library";
+// const WORKOUTS_DIR: &str = "/home/taha/Documents/training/workouts";
 
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
@@ -109,33 +112,26 @@ struct SnoozedExercise {
 }
 
 // --------------------------------------------------
-pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>> {
-    // Open the CSV file
+fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>> {
     let file = File::open(file).with_context(|| format!("Failed to open file: {}", file))?;
-
-    // Create a CSV reader from the file
     let mut rdr = Reader::from_reader(file);
-
-    // Deserialize each record into a T struct and collect them into a vector
-    let mut records = Vec::new();
-    for result in rdr.deserialize() {
-        let record: T = result.with_context(|| "Failed to deserialize record")?;
-        records.push(record);
-    }
-    Ok(records)
+    rdr.deserialize()
+        .enumerate()
+        .map(|(i, result)| {
+            result.with_context(|| format!("Failed to deserialize record at line {}", i + 1))
+        })
+        .collect()
 }
 
-// --------------------------------------------------
 pub fn write_csv<T: serde::Serialize>(file: &str, data: Vec<T>) -> Result<()> {
-    // Create a CSV writer
-    let mut wtr = Writer::from_path(file)?;
-
-    // Serialize each record into CSV and write it to the file
-    for record in data {
+    let mut wtr = Writer::from_path(file)
+        .with_context(|| format!("Failed to create CSV writer for file: {}", file))?;
+    data.into_iter().enumerate().try_for_each(|(i, record)| {
         wtr.serialize(record)
-            .with_context(|| "Failed to serialize record")?;
-    }
-    wtr.flush()?;
+            .with_context(|| format!("Failed to serialize record at index {}", i))
+    })?;
+    wtr.flush()
+        .with_context(|| format!("Failed to flush CSV writer for file: {}", file))?;
     Ok(())
 }
 
@@ -165,6 +161,22 @@ struct Args {
         value_parser = clap::builder::EnumValueParser::<ExerciseLevel>::new(),
     )]
     level: ExerciseLevel,
+
+    #[arg(
+        short,
+        long,
+        value_name = "EXERCISE_LIBRARY_DIR",
+        default_value = "/home/taha/Documents/training/exercise_library"
+    )]
+    exercise_library_dir: PathBuf,
+
+    #[arg(
+        short,
+        long,
+        value_name = "WORKOUTS_DIR",
+        default_value = "/home/taha/Documents/training/workouts"
+    )]
+    workouts_dir: PathBuf,
 }
 
 // --------------------------------------------------
@@ -187,7 +199,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 
 // --------------------------------------------------
 // For pretty printing the exercise names
-fn to_title_case(input: &String) -> String {
+fn to_title_case(input: &str) -> String {
     input
         .replace("__", " - ")
         .replace('_', " ")
@@ -204,34 +216,83 @@ fn to_title_case(input: &String) -> String {
 }
 
 // --------------------------------------------------
+// Filter exercises by type
+fn filter_by_type(e: &Exercise, t: &ExerciseType) -> bool {
+    e.exercise_type == *t
+}
+
+// Filter exercises by level
+fn filter_by_level(e: &Exercise, l: &ExerciseLevel) -> bool {
+    match l {
+        ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
+        ExerciseLevel::Intermediate => {
+            e.exercise_level == ExerciseLevel::Beginner
+                || e.exercise_level == ExerciseLevel::Intermediate
+        }
+        ExerciseLevel::Advanced => true,
+    }
+}
+
+// Filter exercises by category
+fn filter_by_category(e: &Exercise, g: u32, l: &ExerciseLevel, t: &ExerciseType) -> bool {
+    match g {
+        0 => match l {
+            ExerciseLevel::Beginner => e.exercise_category == ExerciseCategory::Secondary,
+            _ => e.exercise_category == ExerciseCategory::Primary,
+        },
+        1 => {
+            e.exercise_category == ExerciseCategory::Primary
+                || e.exercise_category == ExerciseCategory::Secondary
+        }
+        2 => match t {
+            ExerciseType::Core => e.exercise_category == ExerciseCategory::Secondary,
+            _ => {
+                e.exercise_category == ExerciseCategory::Secondary
+                    || e.exercise_category == ExerciseCategory::Accessory
+            }
+        },
+        3.. => match t {
+            ExerciseType::Core => e.exercise_category == ExerciseCategory::Secondary,
+            _ => e.exercise_category == ExerciseCategory::Accessory,
+        },
+    }
+}
+
+// --------------------------------------------------
 fn main() -> Result<()> {
+    // Initialize the logger
+    CombinedLogger::init(vec![
+        TermLogger::new(LevelFilter::Info, Config::default(), TerminalMode::Mixed, ColorChoice::Auto),
+        WriteLogger::new(LevelFilter::Info, Config::default(), File::create("app.log").unwrap()),
+    ]).unwrap();
+
     let args = Args::parse();
 
     let exercise_types = args.types;
-    println!("Exercise types: {:?}", exercise_types);
+    info!("Exercise types: {:?}", exercise_types);
     let exercise_level = args.level;
-    println!("Exercise level: {:?}", exercise_level);
+    info!("Exercise level: {:?}", exercise_level);
 
     let file_paths = [
         (
             ExerciseType::Cooldown,
-            format!("{}/{}", EXERCISE_LIBRARY_DIR, COOLDOWN_FILE),
+            args.exercise_library_dir.join(COOLDOWN_FILE),
         ),
         (
             ExerciseType::Core,
-            format!("{}/{}", EXERCISE_LIBRARY_DIR, CORE_FILE),
+            args.exercise_library_dir.join(CORE_FILE),
         ),
         (
             ExerciseType::Legs,
-            format!("{}/{}", EXERCISE_LIBRARY_DIR, LEGS_FILE),
+            args.exercise_library_dir.join(LEGS_FILE),
         ),
         (
             ExerciseType::Pull,
-            format!("{}/{}", EXERCISE_LIBRARY_DIR, PULL_FILE),
+            args.exercise_library_dir.join(PULL_FILE),
         ),
         (
             ExerciseType::Push,
-            format!("{}/{}", EXERCISE_LIBRARY_DIR, PUSH_FILE),
+            args.exercise_library_dir.join(PUSH_FILE),
         ),
     ]
     .iter()
@@ -239,25 +300,28 @@ fn main() -> Result<()> {
     .collect::<HashMap<_, _>>();
 
     let cooldown_file_path = file_paths.get(&ExerciseType::Cooldown).unwrap();
-    let snoozed_file_path = format!("{}/{}", EXERCISE_LIBRARY_DIR, SNOOZED_FILE);
+    let snoozed_file_path = args.exercise_library_dir.join(SNOOZED_FILE);
 
     // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = read_csv::<Exercise>(cooldown_file_path)?;
+    let mut cooldown_exercises = read_csv::<Exercise>(cooldown_file_path.to_str().unwrap())?;
+    info!("Loaded {} cooldown exercises", cooldown_exercises.len());
 
     // Read snoozed exercises and filter out those that are still within the snooze period
-    let mut snoozed_exercises = read_csv::<SnoozedExercise>(&snoozed_file_path)?
-        .into_iter()
-        .filter(|e| {
-            let now = Utc::now();
-            now.signed_duration_since(e.timestamp).num_days() < SNOOZE_PERIOD
-        })
-        .collect::<Vec<_>>();
+    let now = Utc::now();
+    let mut snoozed_exercises: Vec<SnoozedExercise> =
+        read_csv::<SnoozedExercise>(snoozed_file_path.to_str().unwrap())?
+            .into_iter()
+            .filter(|e| now.signed_duration_since(e.timestamp).num_days() < SNOOZE_PERIOD)
+            .collect();
+    info!("Loaded {} snoozed exercises", snoozed_exercises.len());
 
     let mut relevant_exercises = Vec::new();
 
     for t in &exercise_types {
         if let Some(file_path) = file_paths.get(t) {
-            relevant_exercises.extend(read_csv::<Exercise>(file_path)?);
+            let exercises = read_csv::<Exercise>(file_path.to_str().unwrap())?;
+            info!("Loaded {} exercises for type {:?}", exercises.len(), t);
+            relevant_exercises.extend(exercises);
         }
     }
 
@@ -265,8 +329,10 @@ fn main() -> Result<()> {
     snoozed_exercises.iter().for_each(|snoozed| {
         relevant_exercises.retain(|e| e.name != snoozed.name);
     });
+    info!("Filtered out snoozed exercises, {} exercises remaining", relevant_exercises.len());
 
     shuffle_vector(&mut relevant_exercises);
+    info!("Shuffled relevant exercises");
 
     let mut workout = Vec::<WorkoutExercise>::new();
 
@@ -288,43 +354,12 @@ fn main() -> Result<()> {
         for t in &exercise_types {
             let mut exercises_subset: Vec<&Exercise> = relevant_exercises
                 .iter()
-                .filter(|&e| e.exercise_type == *t)
-                // Filter further if exercise_level is some
-                .filter(|&e| match exercise_level {
-                    ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
-                    // Intermediate includes beginner
-                    ExerciseLevel::Intermediate => {
-                        e.exercise_level == ExerciseLevel::Beginner
-                            || e.exercise_level == ExerciseLevel::Intermediate
-                    }
-                    // Advanced includes intermediate and beginner
-                    ExerciseLevel::Advanced => true,
-                })
+                // Filter by exercise type
+                .filter(|e| filter_by_type(e, t))
+                // Filter by exercise level
+                .filter(|&e| filter_by_level(e, &exercise_level))
                 // Start with primary exercises then secondary and finally accessory
-                .filter(|&e| match group {
-                    0 => match exercise_level {
-                        // Primary exercises are too hard for beginners
-                        ExerciseLevel::Beginner => e.exercise_category == ExerciseCategory::Secondary,
-                        _ => e.exercise_category == ExerciseCategory::Primary,
-                    },
-                    1 => {
-                        e.exercise_category == ExerciseCategory::Primary
-                            || e.exercise_category == ExerciseCategory::Secondary
-                    }
-                    2 => match t {
-                        // No accessory exercises for core
-                        ExerciseType::Core => e.exercise_category == ExerciseCategory::Secondary,
-                        _ => {
-                            e.exercise_category == ExerciseCategory::Secondary
-                                || e.exercise_category == ExerciseCategory::Accessory
-                        }
-                    },
-                    3.. => match t {
-                        // No accessory exercises for core
-                        ExerciseType::Core => e.exercise_category == ExerciseCategory::Secondary,
-                        _ => e.exercise_category == ExerciseCategory::Accessory,
-                    },
-                })
+                .filter(|&e| filter_by_category(e, group, &exercise_level, t))
                 .collect();
 
             if let Some(exercise) = remove_random(&mut exercises_subset) {
@@ -337,6 +372,7 @@ fn main() -> Result<()> {
                 });
                 let workout_exercise = WorkoutExercise::from_exercise(group + 2, exercise);
                 workout.push(workout_exercise);
+                info!("Added exercise {} to workout", exercise.name);
             }
         }
         // To not select the same exercise twice
@@ -352,15 +388,24 @@ fn main() -> Result<()> {
     });
     let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
-
+    info!("Added cooldown exercise {} to workout", cooldown_exercise.name);
+    
+    println!("{:?}", workout);
+    
     // Save the workout to a csv file
     let date = Local::now().format("%Y_%m_%d").to_string();
-    let file_name = format!("{}/{}.csv", WORKOUTS_DIR, date);
-    // write_csv(&file_name, workout)?;
-    println!("{:?}", workout);
+    let file_name = args.workouts_dir.join(format!("{}.csv", date));
+    // write_csv(file_name.to_str().unwrap(), workout)?;
+    info!("Saved workout to {}", file_name.to_str().unwrap());
 
     // Override the snoozed exercises CSV with the updated snoozed exercises
-    // write_csv(&snoozed_file_path, snoozed_exercises)?;
+    // write_csv(snoozed_file_path.to_str().unwrap(), snoozed_exercises)?;
+    info!("Updated snoozed exercises");
 
     Ok(())
 }
+
+// todo: separate CSV module
+// todo: add unit tests for exercise filtering logic
+// toco: document the code
+// todo: CLI improvements
