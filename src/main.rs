@@ -358,17 +358,15 @@ fn main() -> Result<()> {
     for group in 0..args.groups {
         let mut exercises_to_remove = Vec::new();
         for t in &exercise_types {
-            let mut exercises_subset: Vec<&Exercise> = relevant_exercises
+            let exercise = relevant_exercises
                 .iter()
-                // Filter by exercise type
                 .filter(|e| filter_by_type(e, t))
-                // Filter by exercise level
-                .filter(|&e| filter_by_level(e, &exercise_level))
-                // Start with primary exercises then secondary and finally accessory
-                .filter(|&e| filter_by_category(e, group, &exercise_level, t))
-                .collect();
+                .filter(|e| filter_by_level(e, &exercise_level))
+                .filter(|e| filter_by_category(e, group, &exercise_level, t))
+                .next()
+                .cloned();
 
-            if let Some(exercise) = remove_random(&mut exercises_subset) {
+            if let Some(exercise) = exercise {
                 // Mark the exercise for removal from the relevant_exercises vector
                 exercises_to_remove.push(exercise.name.clone());
                 // Add the exercise to the snoozed_exercises vector
@@ -376,9 +374,8 @@ fn main() -> Result<()> {
                     name: exercise.name.clone(),
                     timestamp: Utc::now(),
                 });
-                let workout_exercise = WorkoutExercise::from_exercise(group + 2, exercise);
+                let workout_exercise = WorkoutExercise::from_exercise(group + 2, &exercise);
                 workout.push(workout_exercise);
-                info!("Added exercise {} to workout", exercise.name);
             }
         }
         // To not select the same exercise twice
@@ -414,4 +411,121 @@ fn main() -> Result<()> {
     Ok(())
 }
 
-// todo: add unit tests for exercise filtering logic
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn create_test_exercises() -> Vec<Exercise> {
+        vec![
+            Exercise {
+                name: String::from("Push Up"),
+                exercise_type: ExerciseType::Push,
+                exercise_category: ExerciseCategory::Primary,
+                exercise_level: ExerciseLevel::Beginner,
+                exercise_programming: ExerciseProgramming::Reps,
+                bodyweight: true,
+                goal: Some(String::from("Strength")),
+                video: String::from("push_up.mp4"),
+            },
+            Exercise {
+                name: String::from("Pull Up"),
+                exercise_type: ExerciseType::Pull,
+                exercise_category: ExerciseCategory::Primary,
+                exercise_level: ExerciseLevel::Intermediate,
+                exercise_programming: ExerciseProgramming::Reps,
+                bodyweight: true,
+                goal: Some(String::from("Strength")),
+                video: String::from("pull_up.mp4"),
+            },
+            Exercise {
+                name: String::from("Squat"),
+                exercise_type: ExerciseType::Legs,
+                exercise_category: ExerciseCategory::Primary,
+                exercise_level: ExerciseLevel::Advanced,
+                exercise_programming: ExerciseProgramming::Reps,
+                bodyweight: false,
+                goal: Some(String::from("Strength")),
+                video: String::from("squat.mp4"),
+            },
+            Exercise {
+                name: String::from("Plank"),
+                exercise_type: ExerciseType::Core,
+                exercise_category: ExerciseCategory::Secondary,
+                exercise_level: ExerciseLevel::Beginner,
+                exercise_programming: ExerciseProgramming::Time,
+                bodyweight: true,
+                goal: Some(String::from("Endurance")),
+                video: String::from("plank.mp4"),
+            },
+        ]
+    }
+
+    #[test]
+    fn test_filter_by_type() {
+        let exercises = create_test_exercises();
+        let push_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_type(e, &ExerciseType::Push))
+            .collect();
+        assert_eq!(push_exercises.len(), 1);
+        assert_eq!(push_exercises[0].name, "Push Up");
+
+        let pull_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_type(e, &ExerciseType::Pull))
+            .collect();
+        assert_eq!(pull_exercises.len(), 1);
+        assert_eq!(pull_exercises[0].name, "Pull Up");
+    }
+
+    #[test]
+    fn test_filter_by_level() {
+        let exercises = create_test_exercises();
+        let beginner_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_level(e, &ExerciseLevel::Beginner))
+            .collect();
+        assert_eq!(beginner_exercises.len(), 2);
+        assert!(beginner_exercises.iter().any(|e| e.name == "Push Up"));
+        assert!(beginner_exercises.iter().any(|e| e.name == "Plank"));
+
+        let intermediate_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_level(e, &ExerciseLevel::Intermediate))
+            .collect();
+        assert_eq!(intermediate_exercises.len(), 3);
+        assert!(intermediate_exercises.iter().any(|e| e.name == "Push Up"));
+        assert!(intermediate_exercises.iter().any(|e| e.name == "Pull Up"));
+        assert!(intermediate_exercises.iter().any(|e| e.name == "Plank"));
+
+        let advanced_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_level(e, &ExerciseLevel::Advanced))
+            .collect();
+        assert_eq!(advanced_exercises.len(), 4);
+    }
+
+    #[test]
+    fn test_filter_by_category() {
+        let exercises = create_test_exercises();
+        let primary_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_category(e, 0, &ExerciseLevel::Intermediate, &ExerciseType::Push))
+            .collect();
+        assert_eq!(primary_exercises.len(), 3);
+        assert_eq!(primary_exercises[0].name, "Push Up");
+
+        let secondary_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_category(e, 2, &ExerciseLevel::Intermediate, &ExerciseType::Core))
+            .collect();
+        assert_eq!(secondary_exercises.len(), 1);
+        assert_eq!(secondary_exercises[0].name, "Plank");
+
+        let accessory_exercises: Vec<&Exercise> = exercises
+            .iter()
+            .filter(|e| filter_by_category(e, 3, &ExerciseLevel::Advanced, &ExerciseType::Legs))
+            .collect();
+        assert_eq!(accessory_exercises.len(), 0);
+    }
+}
