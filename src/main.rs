@@ -11,7 +11,6 @@ use rand::{thread_rng, Rng};
 use serde::{Deserialize, Serialize};
 use simplelog::*;
 use std::collections::HashMap;
-use std::fs::File;
 use std::path::PathBuf;
 
 // --------------------------------------------------
@@ -166,14 +165,9 @@ struct Args {
         default_value = "/home/taha/Documents/training/workouts"
     )]
     workouts_dir: PathBuf,
-    
+
     /// Whether to include only bodyweight exercises in the workout
-    #[arg(
-        short,
-        long,
-        value_name = "BODYWEIGHT",
-        default_value = "true",
-    )]
+    #[arg(short, long, value_name = "BODYWEIGHT", default_value = "true")]
     bodyweight: bool,
 }
 
@@ -260,20 +254,7 @@ fn filter_by_category(e: &Exercise, g: u32, l: &ExerciseLevel, t: &ExerciseType)
 // Main function
 fn main() -> Result<()> {
     // Initialize the logger
-    CombinedLogger::init(vec![
-        TermLogger::new(
-            LevelFilter::Info,
-            Config::default(),
-            TerminalMode::Mixed,
-            ColorChoice::Auto,
-        ),
-        // WriteLogger::new(
-        //     LevelFilter::Info,
-        //     Config::default(),
-        //     File::create("app.log").unwrap(),
-        // ),
-    ])
-    .unwrap();
+    init_logger();
 
     let args = Args::parse();
 
@@ -287,66 +268,126 @@ fn main() -> Result<()> {
     info!("Bodyweight: {:?}", bodyweight);
 
     // Map exercise types to their corresponding file paths
-    let file_paths = [
-        (
-            ExerciseType::Cooldown,
-            args.exercise_library_dir.join(COOLDOWN_FILE),
-        ),
-        (
-            ExerciseType::Core,
-            args.exercise_library_dir.join(CORE_FILE),
-        ),
-        (
-            ExerciseType::Legs,
-            args.exercise_library_dir.join(LEGS_FILE),
-        ),
-        (
-            ExerciseType::Pull,
-            args.exercise_library_dir.join(PULL_FILE),
-        ),
-        (
-            ExerciseType::Push,
-            args.exercise_library_dir.join(PUSH_FILE),
-        ),
-    ]
-    .iter()
-    .cloned()
-    .collect::<HashMap<_, _>>();
+    let file_paths = map_file_paths(&args.exercise_library_dir);
 
     let cooldown_file_path = file_paths.get(&ExerciseType::Cooldown).unwrap();
     let snoozed_file_path = args.exercise_library_dir.join(SNOOZED_FILE);
 
-    // A cooldown exercise is always included at the end
-    let mut cooldown_exercises = read_csv::<Exercise>(cooldown_file_path.to_str().unwrap())?;
-    info!("Loaded {} cooldown exercises", cooldown_exercises.len());
+    // Load exercises
+    let mut cooldown_exercises = load_exercises(cooldown_file_path)?;
+    let mut snoozed_exercises = load_snoozed_exercises(&snoozed_file_path)?;
 
-    // Read snoozed exercises and filter out those that are still within the snooze period
+    let mut relevant_exercises = load_relevant_exercises(&exercise_types, &file_paths)?;
+
+    // Filter exercises
+    filter_exercises(&mut relevant_exercises, bodyweight, &snoozed_exercises);
+
+    // Generate workout
+    let mut workout = generate_workout(
+        &mut relevant_exercises,
+        &exercise_types,
+        &exercise_level,
+        num_groups,
+        &mut snoozed_exercises,
+    );
+
+    // Add cooldown exercise
+    add_cooldown_exercise(
+        &mut workout,
+        &mut cooldown_exercises,
+        &mut snoozed_exercises,
+        num_groups,
+    );
+
+    // Save the workout to a CSV file
+    save_workout(&args.workouts_dir, workout)?;
+
+    // Update snoozed exercises
+    update_snoozed_exercises(&snoozed_file_path, snoozed_exercises)?;
+
+    Ok(())
+}
+
+// --------------------------------------------------
+// Initialize the simplelog logger
+fn init_logger() {
+    CombinedLogger::init(vec![TermLogger::new(
+        LevelFilter::Info,
+        Config::default(),
+        TerminalMode::Mixed,
+        ColorChoice::Auto,
+    )])
+    .unwrap();
+}
+
+// --------------------------------------------------
+// Map exercise types to their corresponding file paths
+fn map_file_paths(exercise_library_dir: &PathBuf) -> HashMap<ExerciseType, PathBuf> {
+    [
+        (
+            ExerciseType::Cooldown,
+            exercise_library_dir.join(COOLDOWN_FILE),
+        ),
+        (ExerciseType::Core, exercise_library_dir.join(CORE_FILE)),
+        (ExerciseType::Legs, exercise_library_dir.join(LEGS_FILE)),
+        (ExerciseType::Pull, exercise_library_dir.join(PULL_FILE)),
+        (ExerciseType::Push, exercise_library_dir.join(PUSH_FILE)),
+    ]
+    .iter()
+    .cloned()
+    .collect::<HashMap<_, _>>()
+}
+
+// --------------------------------------------------
+// Load exercises from a CSV file
+fn load_exercises(file_path: &PathBuf) -> Result<Vec<Exercise>> {
+    let exercises = read_csv::<Exercise>(file_path.to_str().unwrap())?;
+    info!("Loaded {} exercises from {:?}", exercises.len(), file_path);
+    Ok(exercises)
+}
+
+// --------------------------------------------------
+// Load snoozed exercises from a CSV file
+fn load_snoozed_exercises(snoozed_file_path: &PathBuf) -> Result<Vec<SnoozedExercise>> {
     let now = Utc::now();
-    let mut snoozed_exercises: Vec<SnoozedExercise> =
+    let snoozed_exercises: Vec<SnoozedExercise> =
         read_csv::<SnoozedExercise>(snoozed_file_path.to_str().unwrap())?
             .into_iter()
             .filter(|e| now.signed_duration_since(e.timestamp).num_days() < SNOOZE_PERIOD)
             .collect();
     info!("Loaded {} snoozed exercises", snoozed_exercises.len());
+    Ok(snoozed_exercises)
+}
 
+// --------------------------------------------------
+// Load relevant exercises for the specified exercise types
+fn load_relevant_exercises(
+    exercise_types: &[ExerciseType],
+    file_paths: &HashMap<ExerciseType, PathBuf>,
+) -> Result<Vec<Exercise>> {
     let mut relevant_exercises = Vec::new();
-
-    // Load exercises for each specified type
-    for t in &exercise_types {
+    for t in exercise_types {
         if let Some(file_path) = file_paths.get(t) {
             let exercises = read_csv::<Exercise>(file_path.to_str().unwrap())?;
             info!("Loaded {} exercises for type {:?}", exercises.len(), t);
             relevant_exercises.extend(exercises);
         }
     }
-    
-    // Keep only bodyweight exercises if the bodyweight flag is true
+    Ok(relevant_exercises)
+}
+
+// --------------------------------------------------
+// Filter exercises based on bodyweight flag and snoozed exercises
+fn filter_exercises(
+    relevant_exercises: &mut Vec<Exercise>,
+    bodyweight: bool,
+    snoozed_exercises: &[SnoozedExercise],
+) {
     if bodyweight {
         relevant_exercises.retain(|e| e.bodyweight);
         info!("Filtered out non-bodyweight exercises");
     }
 
-    // Remove snoozed exercises from relevant_exercises
     snoozed_exercises.iter().for_each(|snoozed| {
         relevant_exercises.retain(|e| e.name != snoozed.name);
     });
@@ -355,10 +396,19 @@ fn main() -> Result<()> {
         relevant_exercises.len()
     );
 
-    // Shuffle the relevant exercises
-    shuffle_vector(&mut relevant_exercises);
+    shuffle_vector(relevant_exercises);
     info!("Shuffled relevant exercises");
+}
 
+// --------------------------------------------------
+// Generate a workout
+fn generate_workout(
+    relevant_exercises: &mut Vec<Exercise>,
+    exercise_types: &[ExerciseType],
+    exercise_level: &ExerciseLevel,
+    num_groups: u32,
+    snoozed_exercises: &mut Vec<SnoozedExercise>,
+) -> Vec<WorkoutExercise> {
     let mut workout = Vec::<WorkoutExercise>::new();
 
     // Skill block placeholder
@@ -376,19 +426,17 @@ fn main() -> Result<()> {
     // Strength training block
     for group in 0..num_groups {
         let mut exercises_to_remove = Vec::new();
-        for t in &exercise_types {
+        for t in exercise_types {
             let exercise = relevant_exercises
                 .iter()
                 .filter(|e| filter_by_type(e, t))
-                .filter(|e| filter_by_level(e, &exercise_level))
-                .filter(|e| filter_by_category(e, group, &exercise_level, t))
+                .filter(|e| filter_by_level(e, exercise_level))
+                .filter(|e| filter_by_category(e, group, exercise_level, t))
                 .next()
                 .cloned();
 
             if let Some(exercise) = exercise {
-                // Mark the exercise for removal from the relevant_exercises vector
                 exercises_to_remove.push(exercise.name.clone());
-                // Add the exercise to the snoozed_exercises vector
                 snoozed_exercises.push(SnoozedExercise {
                     name: exercise.name.clone(),
                     timestamp: Utc::now(),
@@ -397,36 +445,51 @@ fn main() -> Result<()> {
                 workout.push(workout_exercise);
             }
         }
-        // To not select the same exercise twice
         relevant_exercises.retain(|e| !exercises_to_remove.contains(&e.name));
     }
 
-    // Cooldown block
-    let cooldown_exercise = remove_random(&mut cooldown_exercises).unwrap();
-    // Snooze the cooldown exercise
+    workout
+}
+
+// --------------------------------------------------
+// Add a cooldown exercise to the workout
+fn add_cooldown_exercise(
+    workout: &mut Vec<WorkoutExercise>,
+    cooldown_exercises: &mut Vec<Exercise>,
+    snoozed_exercises: &mut Vec<SnoozedExercise>,
+    num_groups: u32,
+) {
+    let cooldown_exercise = remove_random(cooldown_exercises).unwrap();
     snoozed_exercises.push(SnoozedExercise {
         name: cooldown_exercise.name.clone(),
         timestamp: Utc::now(),
     });
-    let workout_exercise = WorkoutExercise::from_exercise(args.groups + 2, &cooldown_exercise);
+    let workout_exercise = WorkoutExercise::from_exercise(num_groups + 2, &cooldown_exercise);
     workout.push(workout_exercise);
     info!(
         "Added cooldown exercise {} to workout",
         cooldown_exercise.name
     );
+}
 
-    // println!("{:?}", workout);
-
-    // Save the workout to a csv file
+// --------------------------------------------------
+// Save the workout to a CSV file
+fn save_workout(workouts_dir: &PathBuf, workout: Vec<WorkoutExercise>) -> Result<()> {
     let date = Local::now().format("%Y_%m_%d").to_string();
-    let file_name = args.workouts_dir.join(format!("{}.csv", date));
+    let file_name = workouts_dir.join(format!("{}.csv", date));
     write_csv(file_name.to_str().unwrap(), workout)?;
     info!("Saved workout to {}", file_name.to_str().unwrap());
+    Ok(())
+}
 
-    // Override the snoozed exercises CSV with the updated snoozed exercises
+// --------------------------------------------------
+// Update the snoozed exercises CSV file
+fn update_snoozed_exercises(
+    snoozed_file_path: &PathBuf,
+    snoozed_exercises: Vec<SnoozedExercise>,
+) -> Result<()> {
     write_csv(snoozed_file_path.to_str().unwrap(), snoozed_exercises)?;
     info!("Updated snoozed exercises");
-
     Ok(())
 }
 
