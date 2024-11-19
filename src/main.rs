@@ -59,6 +59,39 @@ enum ExerciseProgramming {
     Time,
 }
 
+// Enum for rep schemes
+#[derive(Debug, Clone, Serialize, Deserialize)]
+enum RepScheme {
+    // 2 - 4 - 6 - 8 - 6 - 4 - 2
+    Pyramid,
+    // 8 - 6 - 4 - 2
+    ReversePyramid,
+    // 8 - 8 - 8
+    Straight,
+    // 1 - 2 - 3 - 4 - 5 - 4 - 3 - 2 - 1
+    Ladder,
+    // 5 - 4 - 3 - 2 - 1
+    DescendingLadder,
+    // 1 - 2 - 3 - 4 - 5
+    AscendingLadder,
+    // Instead of counting reps, you can base the ladder on time. For example, start with 20 seconds of an exercise, then rest, then 30 seconds, then 40 seconds, and so on
+    TimeBasedLadder,
+    // This involves performing two exercises back to back with no rest in between
+    Superset,
+    // This involves performing a set to failure, then reducing the weight and performing another set to failure
+    Dropset,
+    // This involves performing a set to failure, then resting for a short period before performing another set to failure
+    RestPause,
+    // This involves performing three different exercises back-to-back with no rest in between
+    TriSet,
+    // This involves performing four or more exercises back-to-back with no rest in between
+    GiantSet,
+    // perform as many reps as you can in a set period
+    AMRAP,
+    // Perform a set number of reps at the start of every minute
+    EMOM,
+}
+
 // Struct to represent an exercise
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[allow(dead_code)]
@@ -71,6 +104,28 @@ struct Exercise {
     bodyweight: bool,
     goal: Option<String>,
     video: String,
+}
+
+// ==================================================
+fn random_rep_scheme() -> RepScheme {
+    let mut rng = thread_rng();
+    let schemes = vec![
+        RepScheme::Pyramid,
+        RepScheme::ReversePyramid,
+        RepScheme::Straight,
+        RepScheme::Ladder,
+        RepScheme::DescendingLadder,
+        RepScheme::AscendingLadder,
+        RepScheme::TimeBasedLadder,
+        RepScheme::Superset,
+        RepScheme::Dropset,
+        RepScheme::RestPause,
+        RepScheme::TriSet,
+        RepScheme::GiantSet,
+        RepScheme::AMRAP,
+        RepScheme::EMOM,
+    ];
+    schemes.choose(&mut rng).unwrap().clone()
 }
 
 // Struct to represent a workout exercise
@@ -90,16 +145,31 @@ struct WorkoutExercise {
 impl WorkoutExercise {
     // Create a WorkoutExercise from an Exercise
     fn from_exercise(group: u32, exercise: &Exercise) -> WorkoutExercise {
-        let (distance, time, reps) = match exercise.exercise_programming {
-            ExerciseProgramming::Distance => (String::from("X"), String::new(), String::new()),
-            ExerciseProgramming::Reps => (String::new(), String::new(), String::from("X")),
-            ExerciseProgramming::Time => (String::new(), String::from("X"), String::new()),
+        let (distance, time, reps, sets) = match exercise.exercise_programming {
+            ExerciseProgramming::Distance => (
+                String::from("X"),
+                String::new(),
+                String::new(),
+                String::new(),
+            ),
+            ExerciseProgramming::Reps => (
+                String::new(),
+                String::new(),
+                String::from("X"),
+                format!("{:?}", random_rep_scheme()),
+            ),
+            ExerciseProgramming::Time => (
+                String::new(),
+                String::from("X"),
+                String::new(),
+                String::new(),
+            ),
         };
 
         WorkoutExercise {
             group,
             name: to_title_case(&exercise.name),
-            sets: String::new(),
+            sets,
             distance,
             time,
             reps,
@@ -248,64 +318,6 @@ fn filter_by_category(e: &Exercise, g: u32, l: &ExerciseLevel, t: &ExerciseType)
             _ => e.exercise_category == ExerciseCategory::Accessory,
         },
     }
-}
-
-// --------------------------------------------------
-// Main function
-fn main() -> Result<()> {
-    // Initialize the logger
-    init_logger();
-
-    let args = Args::parse();
-
-    let exercise_types = args.types;
-    info!("Exercise types: {:?}", exercise_types);
-    let exercise_level = args.level;
-    info!("Exercise level: {:?}", exercise_level);
-    let num_groups = args.groups;
-    info!("Number of groups: {:?}", num_groups);
-    let bodyweight = args.bodyweight;
-    info!("Bodyweight: {:?}", bodyweight);
-
-    // Map exercise types to their corresponding file paths
-    let file_paths = map_file_paths(&args.exercise_library_dir);
-
-    let cooldown_file_path = file_paths.get(&ExerciseType::Cooldown).unwrap();
-    let snoozed_file_path = args.exercise_library_dir.join(SNOOZED_FILE);
-
-    // Load exercises
-    let mut cooldown_exercises = load_exercises(cooldown_file_path)?;
-    let mut snoozed_exercises = load_snoozed_exercises(&snoozed_file_path)?;
-
-    let mut relevant_exercises = load_relevant_exercises(&exercise_types, &file_paths)?;
-
-    // Filter exercises
-    filter_exercises(&mut relevant_exercises, bodyweight, &snoozed_exercises);
-
-    // Generate workout
-    let mut workout = generate_workout(
-        &mut relevant_exercises,
-        &exercise_types,
-        &exercise_level,
-        num_groups,
-        &mut snoozed_exercises,
-    );
-
-    // Add cooldown exercise
-    add_cooldown_exercise(
-        &mut workout,
-        &mut cooldown_exercises,
-        &mut snoozed_exercises,
-        num_groups,
-    );
-
-    // Save the workout to a CSV file
-    save_workout(&args.workouts_dir, workout)?;
-
-    // Update snoozed exercises
-    update_snoozed_exercises(&snoozed_file_path, snoozed_exercises)?;
-
-    Ok(())
 }
 
 // --------------------------------------------------
@@ -493,6 +505,65 @@ fn update_snoozed_exercises(
     Ok(())
 }
 
+// --------------------------------------------------
+// Main function
+fn main() -> Result<()> {
+    // Initialize the logger
+    init_logger();
+
+    let args = Args::parse();
+
+    let exercise_types = args.types;
+    info!("Exercise types: {:?}", exercise_types);
+    let exercise_level = args.level;
+    info!("Exercise level: {:?}", exercise_level);
+    let num_groups = args.groups;
+    info!("Number of groups: {:?}", num_groups);
+    let bodyweight = args.bodyweight;
+    info!("Bodyweight: {:?}", bodyweight);
+
+    // Map exercise types to their corresponding file paths
+    let file_paths = map_file_paths(&args.exercise_library_dir);
+
+    let cooldown_file_path = file_paths.get(&ExerciseType::Cooldown).unwrap();
+    let snoozed_file_path = args.exercise_library_dir.join(SNOOZED_FILE);
+
+    // Load exercises
+    let mut cooldown_exercises = load_exercises(cooldown_file_path)?;
+    let mut snoozed_exercises = load_snoozed_exercises(&snoozed_file_path)?;
+
+    let mut relevant_exercises = load_relevant_exercises(&exercise_types, &file_paths)?;
+
+    // Filter exercises
+    filter_exercises(&mut relevant_exercises, bodyweight, &snoozed_exercises);
+
+    // Generate workout
+    let mut workout = generate_workout(
+        &mut relevant_exercises,
+        &exercise_types,
+        &exercise_level,
+        num_groups,
+        &mut snoozed_exercises,
+    );
+
+    // Add cooldown exercise
+    add_cooldown_exercise(
+        &mut workout,
+        &mut cooldown_exercises,
+        &mut snoozed_exercises,
+        num_groups,
+    );
+
+    // Save the workout to a CSV file
+    save_workout(&args.workouts_dir, workout)?;
+
+    // Update snoozed exercises
+    update_snoozed_exercises(&snoozed_file_path, snoozed_exercises)?;
+
+    Ok(())
+}
+
+// --------------------------------------------------
 #[cfg(test)]
 mod tests {
     use super::*;
