@@ -16,19 +16,21 @@ use std::fs::File;
 /// # Errors
 ///
 /// This function will return an error if the file cannot be opened, or if any record cannot be deserialized.
-pub fn read_csv<T: DeserializeOwned>(file: &str) -> Result<Vec<T>> {
+pub fn read_csv<T: DeserializeOwned>(file_path: &str) -> Result<Vec<T>> {
     // Open the file
-    let file = File::open(file).with_context(|| format!("Failed to open file: {}", file))?;
+    let file = File::open(file_path).with_context(|| format!("Failed to open file: {}", file_path))?;
     let mut rdr = Reader::from_reader(file);
 
     // Deserialize each record and collect them into a vector
     rdr.deserialize()
         .enumerate()
         .map(|(i, result)| {
-            result.with_context(|| format!("Failed to deserialize record at line {}", i + 1))
+            result.with_context(|| format!("Failed to deserialize record at line {} in {}", i + 1, file_path))
         })
         .collect()
 }
+
+// --------------------------------------------------
 
 /// Writes a vector of serializable data to a CSV file.
 ///

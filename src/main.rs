@@ -14,6 +14,7 @@ use std::collections::HashMap;
 use std::path::PathBuf;
 
 // --------------------------------------------------
+
 // Constants for file names and snooze period
 const COOLDOWN_FILE: &str = "cooldown.csv";
 const CORE_FILE: &str = "core.csv";
@@ -25,6 +26,7 @@ const SNOOZED_FILE: &str = "snoozed.csv";
 const SNOOZE_PERIOD: i64 = 7; // Snooze period in days
 
 // --------------------------------------------------
+
 // Enum for different exercise types
 #[derive(Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize, clap::ValueEnum)]
 enum ExerciseType {
@@ -60,37 +62,37 @@ enum ExerciseProgramming {
 }
 
 // Enum for rep schemes
-#[derive(Debug, Clone, Serialize, Deserialize)]
-enum RepScheme {
-    // 2 - 4 - 6 - 8 - 6 - 4 - 2
-    Pyramid,
-    // 8 - 6 - 4 - 2
-    ReversePyramid,
-    // 8 - 8 - 8
-    Straight,
-    // 1 - 2 - 3 - 4 - 5 - 4 - 3 - 2 - 1
-    Ladder,
-    // 5 - 4 - 3 - 2 - 1
-    DescendingLadder,
-    // 1 - 2 - 3 - 4 - 5
-    AscendingLadder,
-    // Instead of counting reps, you can base the ladder on time. For example, start with 20 seconds of an exercise, then rest, then 30 seconds, then 40 seconds, and so on
-    TimeBasedLadder,
-    // This involves performing two exercises back to back with no rest in between
-    Superset,
-    // This involves performing a set to failure, then reducing the weight and performing another set to failure
-    Dropset,
-    // This involves performing a set to failure, then resting for a short period before performing another set to failure
-    RestPause,
-    // This involves performing three different exercises back-to-back with no rest in between
-    TriSet,
-    // This involves performing four or more exercises back-to-back with no rest in between
-    GiantSet,
-    // perform as many reps as you can in a set period
-    AMRAP,
-    // Perform a set number of reps at the start of every minute
-    EMOM,
-}
+// #[derive(Debug, Clone, Serialize, Deserialize)]
+// enum RepScheme {
+//     // 2 - 4 - 6 - 8 - 6 - 4 - 2
+//     Pyramid,
+//     // 8 - 6 - 4 - 2
+//     ReversePyramid,
+//     // 8 - 8 - 8
+//     Straight,
+//     // 1 - 2 - 3 - 4 - 5 - 4 - 3 - 2 - 1
+//     Ladder,
+//     // 5 - 4 - 3 - 2 - 1
+//     DescendingLadder,
+//     // 1 - 2 - 3 - 4 - 5
+//     AscendingLadder,
+//     // Instead of counting reps, you can base the ladder on time. For example, start with 20 seconds of an exercise, then rest, then 30 seconds, then 40 seconds, and so on
+//     TimeBasedLadder,
+//     // This involves performing two exercises back to back with no rest in between
+//     Superset,
+//     // This involves performing a set to failure, then reducing the weight and performing another set to failure
+//     Dropset,
+//     // This involves performing a set to failure, then resting for a short period before performing another set to failure
+//     RestPause,
+//     // This involves performing three different exercises back-to-back with no rest in between
+//     TriSet,
+//     // This involves performing four or more exercises back-to-back with no rest in between
+//     GiantSet,
+//     // perform as many reps as you can in a set period
+//     AMRAP,
+//     // Perform a set number of reps at the start of every minute
+//     EMOM,
+// }
 
 // Struct to represent an exercise
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -106,27 +108,28 @@ struct Exercise {
     video: String,
 }
 
-// ==================================================
-fn random_rep_scheme() -> RepScheme {
-    let mut rng = thread_rng();
-    let schemes = vec![
-        RepScheme::Pyramid,
-        RepScheme::ReversePyramid,
-        RepScheme::Straight,
-        RepScheme::Ladder,
-        RepScheme::DescendingLadder,
-        RepScheme::AscendingLadder,
-        RepScheme::TimeBasedLadder,
-        RepScheme::Superset,
-        RepScheme::Dropset,
-        RepScheme::RestPause,
-        RepScheme::TriSet,
-        RepScheme::GiantSet,
-        RepScheme::AMRAP,
-        RepScheme::EMOM,
-    ];
-    schemes.choose(&mut rng).unwrap().clone()
-}
+// --------------------------------------------------
+
+// fn random_rep_scheme() -> RepScheme {
+//     let mut rng = thread_rng();
+//     let schemes = vec![
+//         RepScheme::Pyramid,
+//         RepScheme::ReversePyramid,
+//         RepScheme::Straight,
+//         RepScheme::Ladder,
+//         RepScheme::DescendingLadder,
+//         RepScheme::AscendingLadder,
+//         RepScheme::TimeBasedLadder,
+//         RepScheme::Superset,
+//         RepScheme::Dropset,
+//         RepScheme::RestPause,
+//         RepScheme::TriSet,
+//         RepScheme::GiantSet,
+//         RepScheme::AMRAP,
+//         RepScheme::EMOM,
+//     ];
+//     schemes.choose(&mut rng).unwrap().clone()
+// }
 
 // Struct to represent a workout exercise
 #[derive(Debug, Serialize)]
@@ -156,7 +159,8 @@ impl WorkoutExercise {
                 String::new(),
                 String::new(),
                 String::from("X"),
-                format!("{:?}", random_rep_scheme()),
+                String::new(),
+                // format!("{:?}", random_rep_scheme()),
             ),
             ExerciseProgramming::Time => (
                 String::new(),
@@ -188,6 +192,7 @@ struct SnoozedExercise {
 }
 
 // --------------------------------------------------
+
 // Command line arguments struct
 #[derive(Debug, Parser)]
 #[command(author, version, about)]
@@ -223,7 +228,7 @@ struct Args {
         short,
         long,
         value_name = "EXERCISE_LIBRARY_DIR",
-        default_value = "/home/taha/Documents/training/exercise_library"
+        default_value = "./exercise_library"
     )]
     exercise_library_dir: PathBuf,
 
@@ -232,7 +237,7 @@ struct Args {
         short,
         long,
         value_name = "WORKOUTS_DIR",
-        default_value = "/home/taha/Documents/training/workouts"
+        default_value = "./workouts"
     )]
     workouts_dir: PathBuf,
 
@@ -242,6 +247,7 @@ struct Args {
 }
 
 // --------------------------------------------------
+
 // Shuffle a vector in place
 fn shuffle_vector<T>(vec: &mut Vec<T>) {
     let mut rng = thread_rng();
@@ -249,6 +255,7 @@ fn shuffle_vector<T>(vec: &mut Vec<T>) {
 }
 
 // --------------------------------------------------
+
 // Remove a random element from a vector
 fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
     if vec.is_empty() {
@@ -260,6 +267,7 @@ fn remove_random<T>(vec: &mut Vec<T>) -> Option<T> {
 }
 
 // --------------------------------------------------
+
 // For pretty printing the exercise names
 fn to_title_case(input: &str) -> String {
     input
@@ -278,6 +286,7 @@ fn to_title_case(input: &str) -> String {
 }
 
 // --------------------------------------------------
+
 // Filter exercises by type
 fn filter_by_type(e: &Exercise, t: &ExerciseType) -> bool {
     e.exercise_type == *t
@@ -288,10 +297,14 @@ fn filter_by_level(e: &Exercise, l: &ExerciseLevel) -> bool {
     match l {
         ExerciseLevel::Beginner => e.exercise_level == ExerciseLevel::Beginner,
         ExerciseLevel::Intermediate => {
-            e.exercise_level == ExerciseLevel::Beginner
-                || e.exercise_level == ExerciseLevel::Intermediate
+            e.exercise_level == ExerciseLevel::Intermediate
+            // e.exercise_level == ExerciseLevel::Beginner
+            //     || e.exercise_level == ExerciseLevel::Intermediate
         }
-        ExerciseLevel::Advanced => true,
+        ExerciseLevel::Advanced => {
+            e.exercise_level == ExerciseLevel::Intermediate
+                || e.exercise_level == ExerciseLevel::Advanced
+        }
     }
 }
 
@@ -321,6 +334,7 @@ fn filter_by_category(e: &Exercise, g: u32, l: &ExerciseLevel, t: &ExerciseType)
 }
 
 // --------------------------------------------------
+
 // Initialize the simplelog logger
 fn init_logger() {
     CombinedLogger::init(vec![TermLogger::new(
@@ -333,6 +347,7 @@ fn init_logger() {
 }
 
 // --------------------------------------------------
+
 // Map exercise types to their corresponding file paths
 fn map_file_paths(exercise_library_dir: &PathBuf) -> HashMap<ExerciseType, PathBuf> {
     [
@@ -351,6 +366,7 @@ fn map_file_paths(exercise_library_dir: &PathBuf) -> HashMap<ExerciseType, PathB
 }
 
 // --------------------------------------------------
+
 // Load exercises from a CSV file
 fn load_exercises(file_path: &PathBuf) -> Result<Vec<Exercise>> {
     let exercises = read_csv::<Exercise>(file_path.to_str().unwrap())?;
@@ -359,6 +375,7 @@ fn load_exercises(file_path: &PathBuf) -> Result<Vec<Exercise>> {
 }
 
 // --------------------------------------------------
+
 // Load snoozed exercises from a CSV file
 fn load_snoozed_exercises(snoozed_file_path: &PathBuf) -> Result<Vec<SnoozedExercise>> {
     let now = Utc::now();
@@ -372,6 +389,7 @@ fn load_snoozed_exercises(snoozed_file_path: &PathBuf) -> Result<Vec<SnoozedExer
 }
 
 // --------------------------------------------------
+
 // Load relevant exercises for the specified exercise types
 fn load_relevant_exercises(
     exercise_types: &[ExerciseType],
@@ -385,10 +403,12 @@ fn load_relevant_exercises(
             relevant_exercises.extend(exercises);
         }
     }
+    info!("Loaded {} exercises", relevant_exercises.len());
     Ok(relevant_exercises)
 }
 
 // --------------------------------------------------
+
 // Filter exercises based on bodyweight flag and snoozed exercises
 fn filter_exercises(
     relevant_exercises: &mut Vec<Exercise>,
@@ -397,7 +417,10 @@ fn filter_exercises(
 ) {
     if bodyweight {
         relevant_exercises.retain(|e| e.bodyweight);
-        info!("Filtered out non-bodyweight exercises");
+        info!(
+            "Filtered out non-bodyweight exercises, {} exercies remaining",
+            relevant_exercises.len()
+        );
     }
 
     snoozed_exercises.iter().for_each(|snoozed| {
@@ -413,6 +436,7 @@ fn filter_exercises(
 }
 
 // --------------------------------------------------
+
 // Generate a workout
 fn generate_workout(
     relevant_exercises: &mut Vec<Exercise>,
@@ -464,6 +488,7 @@ fn generate_workout(
 }
 
 // --------------------------------------------------
+
 // Add a cooldown exercise to the workout
 fn add_cooldown_exercise(
     workout: &mut Vec<WorkoutExercise>,
@@ -485,6 +510,7 @@ fn add_cooldown_exercise(
 }
 
 // --------------------------------------------------
+
 // Save the workout to a CSV file
 fn save_workout(workouts_dir: &PathBuf, workout: Vec<WorkoutExercise>) -> Result<()> {
     let date = Local::now().format("%Y_%m_%d").to_string();
@@ -495,6 +521,7 @@ fn save_workout(workouts_dir: &PathBuf, workout: Vec<WorkoutExercise>) -> Result
 }
 
 // --------------------------------------------------
+
 // Update the snoozed exercises CSV file
 fn update_snoozed_exercises(
     snoozed_file_path: &PathBuf,
@@ -506,6 +533,7 @@ fn update_snoozed_exercises(
 }
 
 // --------------------------------------------------
+
 // Main function
 fn main() -> Result<()> {
     // Initialize the logger
@@ -555,6 +583,9 @@ fn main() -> Result<()> {
     );
 
     // Save the workout to a CSV file
+    if !args.workouts_dir.exists() {
+        std::fs::create_dir_all(&args.workouts_dir)?;
+    }
     save_workout(&args.workouts_dir, workout)?;
 
     // Update snoozed exercises
@@ -564,6 +595,7 @@ fn main() -> Result<()> {
 }
 
 // --------------------------------------------------
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -613,6 +645,8 @@ mod tests {
         ]
     }
 
+    // --------------------------------------------------
+
     #[test]
     fn test_filter_by_type() {
         let exercises = create_test_exercises();
@@ -630,6 +664,8 @@ mod tests {
         assert_eq!(pull_exercises.len(), 1);
         assert_eq!(pull_exercises[0].name, "Pull Up");
     }
+
+    // --------------------------------------------------
 
     #[test]
     fn test_filter_by_level() {
@@ -657,6 +693,8 @@ mod tests {
             .collect();
         assert_eq!(advanced_exercises.len(), 4);
     }
+
+    // --------------------------------------------------
 
     #[test]
     fn test_filter_by_category() {

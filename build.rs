@@ -3,7 +3,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-const COPY_DIR: &'static str = "exercise_library";
+const EXERCISE_LIB: &'static str = "exercise_library";
 
 /// A helper function for recursively copying a directory.
 fn copy_dir<P, Q>(from: P, to: Q)
@@ -33,7 +33,7 @@ where
 fn main() {
     // Request the output directory
     let out = env::var("PROFILE").unwrap();
-    let out = PathBuf::from(format!("target/{}/{}", out, COPY_DIR));
+    let out = PathBuf::from(format!("target/{}/{}", out, EXERCISE_LIB));
 
     // If it is already in the output directory, delete it and start over
     if out.exists() {
@@ -44,5 +44,5 @@ fn main() {
     fs::create_dir(&out).unwrap();
 
     // Copy the directory
-    copy_dir(COPY_DIR, &out);
+    copy_dir(EXERCISE_LIB, &out);
 }

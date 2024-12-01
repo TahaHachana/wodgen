@@ -6,8 +6,16 @@ bridge_dynamic,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/ex
 squat__goblet,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_goblet.mp4
 lunge_jumping,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/lunge_jumping.mp4
 squat__jump__side,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_side_jump.mp4
-squat_step-up,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_step_up.mp4
+squat_step-up,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_step_up.mp4
 squat__cossack__weighted,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_cossack_weighted.mp4
 lunge__reverse__weighted,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/lunge_reverse_weighted.mp4
 squat__wide,Legs,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_wide.mp4
 squat__narrow_stance,Legs,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_narrow_stance.mp4
+squat__split__bulgarian,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_split_bulgarian.mp4
+calves__raise,Legs,Accessory,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/calves_raise.mp4
+squat__pistol,Legs,Primary,Advanced,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_pistol.mp4
+hyper__reverse,Legs,Accessory,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/hyper_reverse.mp4
+bridge__single_leg,Legs,Primary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/bridge_single_leg.mp4
+wall_sit,Legs,Secondary,Beginner,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/wall_sit.mp4
+bridge_single_leg_static,Legs,Secondary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/bridge_single_leg_static.mp4
+squat_jump,Legs,Primary,Intermediate,Reps,true,,/home/taha/Documents/training/exercise_library/video/legs/squat_jump.mp4
