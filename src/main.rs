@@ -233,12 +233,7 @@ struct Args {
     exercise_library_dir: PathBuf,
 
     /// Path to the workouts directory
-    #[arg(
-        short,
-        long,
-        value_name = "WORKOUTS_DIR",
-        default_value = "./workouts"
-    )]
+    #[arg(short, long, value_name = "WORKOUTS_DIR", default_value = "./workouts")]
     workouts_dir: PathBuf,
 
     /// Whether to include only bodyweight exercises in the workout
