@@ -555,6 +555,13 @@ fn main() -> Result<()> {
     let mut cooldown_exercises = load_exercises(cooldown_file_path)?;
     let mut snoozed_exercises = load_snoozed_exercises(&snoozed_file_path)?;
 
+    // Filter out snoozed exercises from cooldown exercises
+    cooldown_exercises.retain(|e| {
+        !snoozed_exercises
+            .iter()
+            .any(|snoozed| snoozed.name == e.name)
+    });
+
     let mut relevant_exercises = load_relevant_exercises(&exercise_types, &file_paths)?;
 
     // Filter exercises
