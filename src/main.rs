@@ -456,8 +456,10 @@ fn generate_workout(
 
     // Strength training block
     for group in 0..num_groups {
+        info!("Generating group {}", group + 1);
         let mut exercises_to_remove = Vec::new();
         for t in exercise_types {
+            info!("Picking exercise of type {:?}", t);
             let exercise = relevant_exercises
                 .iter()
                 .filter(|e| filter_by_type(e, t))
@@ -467,6 +469,7 @@ fn generate_workout(
                 .cloned();
 
             if let Some(exercise) = exercise {
+                info!("Picked exercise {:?}", exercise);
                 exercises_to_remove.push(exercise.name.clone());
                 snoozed_exercises.push(SnoozedExercise {
                     name: exercise.name.clone(),
